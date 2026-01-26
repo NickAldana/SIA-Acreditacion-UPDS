@@ -18,6 +18,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+         if (config('app.env') === 'production') {
+        \Illuminate\Support\Facades\URL::forceScheme('https');
+    }
         // --------------------------------------------------------------------
         // 1. REGISTRO DEL DRIVER DE AZURE (SOCIALITE)
         // --------------------------------------------------------------------
@@ -61,5 +64,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('ver_indicadores', function (User $user) {
             return $user->canDo('ver_indicadores') || $user->canDo('ver_dashboard');
         });
+        
     }
+   
 }
