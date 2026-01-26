@@ -28,14 +28,14 @@ WORKDIR /var/www
 # Copiar el proyecto al contenedor
 COPY . .
 
-# Instalar dependencias de PHP
+# Instalar dependencias de PHP (Laravel)
 RUN composer install --no-dev --optimize-autoloader
 
 # Ajustar permisos para Laravel
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-# Puerto que usará Render
+# Puerto dinámico asignado por Railway
 EXPOSE 80
 
-# Comando para iniciar la aplicación
-CMD php artisan serve --host=0.0.0.0 --port=80
+# Comando para limpiar cache e iniciar la app
+CMD php artisan config:cache && php artisan route:cache && php artisan serve --host=0.0.0.0 --port=${PORT:-80}
