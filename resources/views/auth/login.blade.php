@@ -1,240 +1,175 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso SIA - UPDS</title>
+@extends('layouts.app')
+
+@section('content')
+<div class="sia-auth-wrapper animate__animated animate__fadeIn">
     
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    
-    <style>
-        /* =========================================================
-           SIA - ESTILOS DE AUTENTICACIÓN V4.0
-           ========================================================= */
-        :root {
-            --upds-blue: #003566;
-            --upds-blue-dark: #001d3d;
-            --upds-blue-light: #00509d;
-            --upds-gold: #ffc300;
-            --upds-gold-hover: #ffb700;
-        }
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* 1. FONDO CORPORATIVO */
-        .sia-auth-bg {
-            background: radial-gradient(circle at top right, var(--upds-blue-light), var(--upds-blue-dark));
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        /* Patrón de fondo sutil (opcional) */
-        .sia-auth-bg::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            z-index: 0;
-        }
-
-        /* 2. TARJETA DE LOGIN */
-        .sia-auth-card {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            background-color: #ffffff;
-            overflow: hidden;
-            width: 100%;
-            max-width: 420px;
-            position: relative;
-            z-index: 10;
-        }
-
-        /* 3. ENCABEZADO */
-        .sia-card-header {
-            background-color: var(--upds-blue);
-            padding: 3rem 2rem 2rem;
-            text-align: center;
-            position: relative;
-            border-bottom: 5px solid var(--upds-gold);
-        }
-
-        /* 4. INPUTS */
-        .form-floating > .form-control {
-            border-radius: 12px;
-            border: 2px solid #e2e8f0;
-            height: 58px;
-            font-weight: 500;
-            color: var(--upds-blue);
-        }
-
-        .form-floating > .form-control:focus {
-            border-color: var(--upds-blue-light);
-            box-shadow: 0 0 0 4px rgba(0, 53, 102, 0.1);
-        }
-
-        .form-floating > label {
-            color: #94a3b8;
-            font-size: 0.9rem;
-        }
-
-        .input-group-text {
-            border-radius: 0 12px 12px 0;
-            border: 2px solid #e2e8f0;
-            border-left: none;
-            background: white;
-        }
+    {{-- Tarjeta de Login Compacta --}}
+    <div class="sia-compact-card">
         
-        /* Input Password Ajuste */
-        .password-field {
-            border-radius: 12px 0 0 12px !important;
-            border-right: none !important;
-        }
-        .password-field:focus {
-            z-index: 1;
-        }
+        {{-- Cabecera Tighter (Más estrecha) --}}
+        <div class="sia-card-header-compact">
+            <div class="logo-box">
+                <i class="bi bi-mortarboard-fill text-upds-gold"></i>
+            </div>
+            <h5 class="text-white font-black tracking-tighter mb-0 mt-2">SIA V4.0</h5>
+            <span class="text-white/40 text-[9px] font-bold uppercase tracking-widest">Portal de Acceso</span>
+        </div>
 
-        /* 5. BOTÓN PRINCIPAL */
-        .btn-sia-login {
-            background-color: var(--upds-blue);
-            color: white;
-            font-weight: 800;
-            font-size: 1rem;
-            padding: 14px;
-            border-radius: 50px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            border: none;
-            box-shadow: 0 10px 20px rgba(0, 53, 102, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .btn-sia-login:hover {
-            background-color: var(--upds-blue-light);
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(0, 53, 102, 0.3);
-            color: white;
-        }
-
-        /* 6. UTILIDADES */
-        .text-upds-gold { color: var(--upds-gold); }
-        .text-upds-blue { color: var(--upds-blue); }
-    </style>
-</head>
-<body>
-
-    <div class="sia-auth-bg">
-        <div class="container d-flex justify-content-center px-4">
-            
-            <div class="card sia-auth-card">
-                
-                {{-- Encabezado Visual UPDS --}}
-                <div class="sia-card-header">
-                    <div class="mb-3">
-                        <i class="bi bi-mortarboard-fill text-upds-gold display-3 drop-shadow"></i>
-                    </div>
-                    <h4 class="fw-black text-white mb-0 tracking-tight">SIA - UPDS</h4>
-                    <p class="text-white-50 small text-uppercase tracking-widest mb-0 font-monospace">Sistema de Acreditación</p>
-                </div>
-
-                <div class="card-body p-4 p-md-5">
-                    
-                    <div class="text-center mb-4">
-                        <h6 class="fw-bold text-upds-blue">Bienvenido</h6>
-                        <p class="text-muted small">Ingrese sus credenciales institucionales para continuar.</p>
-                    </div>
-
-                    <form action="{{ route('login') }}" method="POST">
-                        @csrf
-
-                        {{-- Email --}}
-                        <div class="form-floating mb-3">
-                            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" id="floatingInput" placeholder="nombre@upds.edu.bo" value="{{ old('email') }}" required autofocus>
-                            <label for="floatingInput">Correo Institucional</label>
-                            @error('email')
-                                <div class="invalid-feedback ps-2 fw-bold small">
-                                    {{ $message }}
-                                </div>
-                            @enderror
-                        </div>
-
-                        {{-- Password con Toggle --}}
-                        <div class="input-group mb-4">
-                            <div class="form-floating flex-grow-1">
-                                <input type="password" name="password" class="form-control password-field @error('password') is-invalid @enderror" id="passwordInput" placeholder="Contraseña" required>
-                                <label for="passwordInput">Contraseña</label>
-                            </div>
-                            <span class="input-group-text px-3" style="cursor: pointer;" onclick="togglePassword()">
-                                <i class="bi bi-eye text-muted fs-5" id="toggleIcon"></i>
-                            </span>
-                            @error('password')
-                                <div class="invalid-feedback d-block ps-2 fw-bold small">
-                                    {{ $message }}
-                                </div>
-                            @enderror
-                        </div>
-
-                        {{-- Recordarme y Olvidé Contraseña --}}
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="remember" id="rememberCheck" style="cursor: pointer;">
-                                <label class="form-check-label small text-secondary fw-semibold" for="rememberCheck" style="cursor: pointer;">
-                                    Recordarme
-                                </label>
-                            </div>
-                            </div>
-
-                        {{-- Botón CTA --}}
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-sia-login">
-                                <i class="bi bi-box-arrow-in-right me-2"></i> Acceder al Portal
-                            </button>
-                        </div>
-
-                    </form>
-                </div>
-                
-                {{-- Footer Login --}}
-                <div class="bg-gray-50 text-center py-3 border-top border-light">
-                    <p class="text-muted text-[10px] small mb-0 uppercase tracking-wider font-bold" style="font-size: 0.7rem;">
-                        UPDS Santa Cruz &copy; {{ date('Y') }}
-                    </p>
-                </div>
+        <div class="card-body p-4 p-md-5 bg-white">
+            <div class="text-center mb-4">
+                <h6 class="font-black text-upds-blue mb-1">Identificación Administrativa</h6>
+                <p class="text-slate-400 text-[11px] font-medium">Ingrese sus credenciales del Vicerrectorado.</p>
             </div>
 
+            <form action="{{ route('login') }}" method="POST">
+                @csrf
+
+                {{-- Input Email --}}
+                <div class="form-floating mb-3">
+                    <input type="email" name="email" class="form-control sia-input @error('email') is-invalid @enderror" 
+                           id="floatingInput" placeholder="nombre@upds.edu.bo" value="{{ old('email') }}" required autofocus>
+                    <label for="floatingInput" class="text-slate-400">Correo Institucional</label>
+                    @error('email')
+                        <div class="invalid-feedback font-bold text-[10px]">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- Input Password --}}
+                <div class="input-group mb-4">
+                    <div class="form-floating flex-grow-1">
+                        <input type="password" name="password" class="form-control sia-input password-field @error('password') is-invalid @enderror" 
+                               id="passwordInput" placeholder="Contraseña" required>
+                        <label for="passwordInput" class="text-slate-400">Contraseña</label>
+                    </div>
+                    <span class="input-group-text sia-input-append" onclick="togglePassword()">
+                        <i class="bi bi-eye text-slate-400" id="toggleIcon"></i>
+                    </span>
+                    @error('password')
+                        <div class="invalid-feedback d-block font-bold text-[10px]">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4 px-1">
+                    <div class="form-check">
+                        <input class="form-check-input sia-check" type="checkbox" name="remember" id="rememberCheck">
+                        <label class="form-check-label text-[11px] font-bold text-slate-500" for="rememberCheck">
+                            Recordarme
+                        </label>
+                    </div>
+                </div>
+
+                {{-- Botón de Acción --}}
+                <button type="submit" class="btn btn-sia-primary-compact w-100">
+                    <i class="bi bi-shield-lock-fill me-2"></i> INGRESAR
+                </button>
+            </form>
+        </div>
+
+        {{-- Footer Mini --}}
+        <div class="py-3 bg-slate-50 border-t text-center">
+            <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0">
+                UPDS Santa Cruz © {{ date('Y') }}
+            </p>
         </div>
     </div>
+</div>
 
-    <script>
-        function togglePassword() {
-            const passwordInput = document.getElementById('passwordInput');
-            const icon = document.getElementById('toggleIcon');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.remove('bi-eye');
-                icon.classList.add('bi-eye-slash');
-                icon.classList.add('text-upds-blue'); // Highlight color when visible
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.remove('bi-eye-slash');
-                icon.classList.remove('text-upds-blue');
-                icon.classList.add('bi-eye');
-            }
+<style>
+    /* Estilos para el Login Compacto SIA V4.0 */
+    .sia-auth-wrapper {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100vh;
+        background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+
+    .sia-compact-card {
+        width: 100%;
+        max-width: 380px; /* Tamaño más compacto */
+        background: white;
+        border-radius: 1.5rem;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    .sia-card-header-compact {
+        background-color: var(--upds-blue);
+        padding: 2rem 1rem;
+        text-align: center;
+        border-bottom: 4px solid var(--upds-gold);
+    }
+
+    .logo-box {
+        font-size: 2.5rem;
+        line-height: 1;
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+    }
+
+    .sia-input {
+        border: 2px solid #f1f5f9 !important;
+        background-color: #f8fafc !important;
+        border-radius: 12px !important;
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+    }
+
+    .sia-input:focus {
+        border-color: var(--upds-gold) !important;
+        background-color: white !important;
+        box-shadow: 0 0 0 4px rgba(255, 195, 0, 0.1) !important;
+    }
+
+    .sia-input-append {
+        background: #f8fafc;
+        border: 2px solid #f1f5f9;
+        border-left: none;
+        border-radius: 0 12px 12px 0;
+        cursor: pointer;
+    }
+
+    .btn-sia-primary-compact {
+        background-color: var(--upds-blue);
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 12px;
+        font-weight: 900;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+    }
+
+    .btn-sia-primary-compact:hover {
+        background-color: var(--upds-blue-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        color: white;
+    }
+
+    .sia-check:checked {
+        background-color: var(--upds-gold);
+        border-color: var(--upds-gold);
+    }
+
+    .font-black { font-weight: 900; }
+    .tracking-tighter { letter-spacing: -0.05em; }
+</style>
+
+<script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('passwordInput');
+        const icon = document.getElementById('toggleIcon');
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.replace('bi-eye', 'bi-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.replace('bi-eye-slash', 'bi-eye');
         }
-    </script>
-</body>
-</html>
+    }
+</script>
+@endsection

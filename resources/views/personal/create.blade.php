@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4 px-2">
         <div>
             <h1 class="fw-black text-upds-blue mb-0 tracking-tight" style="font-size: 1.75rem;">
-                NUEVO EXPEDIENTE
+                NUEVO REGISTRO DE PERSONAL
             </h1>
             <p class="text-secondary small fw-bold text-uppercase tracking-widest mb-0">
                 <i class="bi bi-folder-plus me-1 text-upds-gold"></i> Gestión de Talento Humano
@@ -177,11 +177,11 @@
                                     <label class="form-label sia-label">Experiencia Profesional</label>
                                     <select name="AniosExperiencia" class="form-select sia-input">
                                         <option value="" selected disabled>Seleccionar Rango...</option>
-                                        <option value="1 - 4" {{ old('AniosExperiencia') == '1 - 4' ? 'selected' : '' }}>Junior (1 - 4 años)</option>
-                                        <option value="5 - 9" {{ old('AniosExperiencia') == '5 - 9' ? 'selected' : '' }}>Semi Senior (5 - 9 años)</option>
-                                        <option value="10 - 14" {{ old('AniosExperiencia') == '10 - 14' ? 'selected' : '' }}>Senior (10 - 14 años)</option>
-                                        <option value="15 - 19" {{ old('AniosExperiencia') == '15 - 19' ? 'selected' : '' }}>Experto (15 - 19 años)</option>
-                                        <option value="+20" {{ old('AniosExperiencia') == '+20' ? 'selected' : '' }}>Master (+20 años)</option>
+                                        <option value="1 - 4" {{ old('AniosExperiencia') == '1 - 4' ? 'selected' : '' }}>1 - 4 años</option>
+                                        <option value="5 - 9" {{ old('AniosExperiencia') == '5 - 9' ? 'selected' : '' }}>5 - 9 años</option>
+                                        <option value="10 - 14" {{ old('AniosExperiencia') == '10 - 14' ? 'selected' : '' }}>10 - 14 </option>
+                                        <option value="15 - 19" {{ old('AniosExperiencia') == '15 - 19' ? 'selected' : '' }}>15 - 19</option>
+                                        <option value="+20" {{ old('AniosExperiencia') == '+20' ? 'selected' : '' }}>+20 años</option>
                                     </select>
                                 </div>
                             </div>
@@ -227,7 +227,7 @@
                         <div class="d-flex justify-content-end align-items-center gap-3">
                             <a href="{{ route('personal.index') }}" class="btn text-secondary fw-bold text-uppercase text-xs hover-text-dark">Cancelar</a>
                             <button type="submit" class="btn btn-sia-primary shadow-lg">
-                                <i class="bi bi-save2-fill me-2"></i> Registrar Expediente
+                                <i class="bi bi-save2-fill me-2"></i> Registrar Docente
                             </button>
                         </div>
                     </div>

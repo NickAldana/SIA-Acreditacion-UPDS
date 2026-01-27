@@ -13,6 +13,7 @@ class AuthController extends Controller
      */
     public function showLoginForm()
     {
+        // Si ya está autenticado, lo enviamos al panel interno
         if (Auth::check()) {
             return redirect()->route('dashboard');
         }
@@ -37,7 +38,6 @@ class AuthController extends Controller
 
         // 2. INTENTO DE LOGIN
         // 'Email' (Mayúscula): Para que el WHERE de SQL Server busque en la columna correcta.
-        // 'password' (Minúscula): Laravel usa esta llave reservada para saber qué valor hashear y comparar.
         if (Auth::attempt([
             'Email' => $request->email, 
             'password' => $request->password
@@ -54,7 +54,7 @@ class AuthController extends Controller
                 ])->withInput();
             }
 
-            // 4. Éxito
+            // 4. Éxito - regenerar sesión para evitar fijación de sesiones
             $request->session()->regenerate();
             return redirect()->intended('dashboard');
         }
@@ -67,13 +67,17 @@ class AuthController extends Controller
 
     /**
      * Cerrar sesión.
+     * Ajustado para redirigir a la Portada Principal (Welcome).
      */
     public function logout(Request $request)
     {
         Auth::logout();
+        
+        // Limpiar la sesión por completo
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        // REDIRECCIÓN AJUSTADA: De 'login' a 'welcome'
+        return redirect()->route('welcome');
     }
 }

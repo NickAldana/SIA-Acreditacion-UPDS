@@ -23,87 +23,90 @@ class PersonalController extends Controller
     // =========================================================================
    // En PersonalController.php
 
-    public function index(Request $request)
-    {
-        /** @var \App\Models\User $currentUser */
-        $currentUser = Auth::user();
-        
-        // Iniciamos la consulta base
-        $query = Personal::with(['contrato', 'cargo', 'usuario', 'carreras']) // Eager loading 'carreras'
-                         ->withCount('materias');
+ public function index(Request $request)
+{
+    /** @var \App\Models\User $currentUser */
+    $currentUser = Auth::user();
+    
+    // 1. OBTENER CARRERAS DISPONIBLES PARA EL FILTRO (Según Jerarquía)
+    $carrerasQuery = Carrera::orderBy('NombreCarrera');
 
-        // =====================================================================
-        // 1. FILTRO DE SEGURIDAD HORIZONTAL (ÁREAS/FACULTADES)
-        // =====================================================================
-        
-        // Si NO es Super Admin, aplicamos visión de túnel
-        if (!$currentUser->canDo('acceso_total')) {
+    // Si NO es Super Admin, solo ve las carreras que tiene asignadas en la tabla CarreraPersonal
+    if (!$currentUser->canDo('acceso_total')) {
+        $misCarrerasIds = $currentUser->personal->carreras->pluck('IdCarrera')->toArray();
+        $carrerasQuery->whereIn('IdCarrera', $misCarrerasIds);
+    }
+    $carreras = $carrerasQuery->get();
+
+    // 2. INICIAR CONSULTA BASE DE PERSONAL
+    // Cargamos relaciones necesarias para evitar el problema N+1 (formaciones para el título)
+    $query = Personal::with(['contrato', 'cargo', 'formaciones', 'carreras'])
+                     ->withCount('materias');
+
+    // 3. FILTRO DE SEGURIDAD HORIZONTAL (Visión de Túnel)
+    if (!$currentUser->canDo('acceso_total')) {
+        $miPersonal = $currentUser->personal;
+        if ($miPersonal) {
+            $misCarrerasIds = $miPersonal->carreras->pluck('IdCarrera')->toArray();
             
-            // Verificamos si el usuario tiene ficha de personal
-            $miPersonal = $currentUser->personal;
-
-            if ($miPersonal) {
-                // Obtenemos las carreras asignadas al Jefe/Decano actual
-                // (pluck genera un array simple de IDs: [1, 5, 8])
-                $misCarrerasIds = $miPersonal->carreras->pluck('IdCarrera')->toArray();
-
-                if (empty($misCarrerasIds)) {
-                    // CASO BORDE: Es Jefe pero no le asignaron carrera en la BD.
-                    // No debería ver nada por seguridad.
-                    $query->whereRaw('1 = 0'); 
-                } else {
-                    
-                    // LÓGICA DECANO VS JEFE
-                    // El Decano (Nivel 80) ve toda la Facultad. El Jefe (Nivel 50) solo su Carrera.
-                    $miNivel = $currentUser->cargo()->nivel_jerarquico ?? 0;
-
-                    if ($miNivel >= 80) { 
-                        // === VISIÓN DE DECANO (Por Facultad) ===
-                        // 1. Buscamos las Facultades de mis carreras
-                        $misFacultadesIds = Carrera::whereIn('IdCarrera', $misCarrerasIds)
-                                                   ->pluck('IdFacultad')
-                                                   ->unique();
-                        
-                        // 2. Filtramos docentes que pertenezcan a carreras de esas facultades
-                        $query->whereHas('carreras', function($q) use ($misFacultadesIds) {
-                            $q->whereIn('IdFacultad', $misFacultadesIds);
-                        });
-
-                    } else {
-                        // === VISIÓN DE JEFE (Por Carrera Específica) ===
-                        // Solo veo docentes que dicten clases en mis carreras asignadas
-                        $query->whereHas('carreras', function($q) use ($misCarrerasIds) {
-                            $q->whereIn('Carrera.IdCarrera', $misCarrerasIds);
-                        });
-                    }
-                }
+            if (empty($misCarrerasIds)) {
+                $query->whereRaw('1 = 0'); // No tiene carreras asignadas, no ve nada
             } else {
-                // Si es usuario sin personal asociado y no es admin, no ve nada.
-                $query->whereRaw('1 = 0');
+                $miNivel = $currentUser->cargo()->nivel_jerarquico ?? 0;
+
+                if ($miNivel >= 80) { // Lógica para DECANO (Ve toda su Facultad)
+                    $misFacultadesIds = Carrera::whereIn('IdCarrera', $misCarrerasIds)
+                                               ->pluck('IdFacultad')
+                                               ->unique();
+                    
+                    $query->whereHas('carreras', function($q) use ($misFacultadesIds) {
+                        $q->whereIn('Carrera.IdFacultad', $misFacultadesIds);
+                    });
+                } else { // Lógica para JEFE (Solo ve su Carrera)
+                    $query->whereHas('carreras', function($q) use ($misCarrerasIds) {
+                        $q->whereIn('Carrera.IdCarrera', $misCarrerasIds);
+                    });
+                }
             }
         }
-
-        // =====================================================================
-        // 2. FILTROS DE BÚSQUEDA NORMALES (Front-end)
-        // =====================================================================
-
-        if ($request->filled('buscar')) {
-            $query->where(function($q) use ($request) {
-                $q->where('NombreCompleto', 'like', '%' . $request->buscar . '%')
-                  ->orWhere('ApellidoPaterno', 'like', '%' . $request->buscar . '%')
-                  ->orWhere('CI', 'like', '%' . $request->buscar . '%');
-            });
-        }
-
-        if ($request->filled('estado')) {
-            $query->where('Activo', $request->estado);
-        }
-
-        // Orden y Paginación
-        $personal = $query->orderBy('ApellidoPaterno')->paginate(15)->withQueryString();
-        
-        return view('personal.index', compact('personal'));
     }
+
+    // 4. APLICAR FILTROS DEL USUARIO (Formulario)
+    
+    // Búsqueda por Nombre, Apellido o CI
+    if ($request->filled('buscar')) {
+        $query->where(function($q) use ($request) {
+            $q->where('NombreCompleto', 'like', '%' . $request->buscar . '%')
+              ->orWhere('ApellidoPaterno', 'like', '%' . $request->buscar . '%')
+              ->orWhere('CI', 'like', '%' . $request->buscar . '%');
+        });
+    }
+
+    // Filtro por Carrera específica
+    if ($request->filled('carrera')) {
+        $query->whereHas('carreras', function($q) use ($request) {
+            $q->where('Carrera.IdCarrera', $request->carrera);
+        });
+    }
+
+    // Filtro por Estado (1 = Activo, 0 = Baja)
+    if ($request->filled('estado')) {
+        $query->where('Activo', $request->estado);
+    }
+
+    // 5. LÓGICA DE CARGA BAJO DEMANDA
+    // Si el usuario no ha enviado ningún filtro, enviamos una colección vacía.
+    // Esto evita que el sistema intente cargar a los 87+ docentes de golpe al entrar.
+    if ($request->anyFilled(['buscar', 'carrera', 'estado'])) {
+        $personal = $query->orderBy('ApellidoPaterno')
+                          ->paginate(15)
+                          ->withQueryString();
+    } else {
+        $personal = collect(); 
+    }
+    
+    return view('personal.index', compact('personal', 'carreras'));
+}
 
     // =========================================================================
     // 2. CREACIÓN (VISTA Y LÓGICA)

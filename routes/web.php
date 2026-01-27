@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PersonalController;
 use App\Http\Controllers\CargaAcademicaController;
@@ -14,23 +15,27 @@ use App\Http\Controllers\DashboardController;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/test-config', function() {
-    dd(config('services.azure'));
-});
+// =========================================================================
+// 1. PORTADA Y REDIRECCIÓN INICIAL
+// =========================================================================
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    return view('welcome');
+})->name('welcome');
+
 
 // =========================================================================
-// 1. RUTAS PÚBLICAS (Invitados)
+// 2. RUTAS DE AUTENTICACIÓN (Invitados)
 // =========================================================================
 Route::middleware('guest')->group(function () {
-    Route::get('/', function () { 
-        return redirect()->route('login'); 
-    });
     
     Route::controller(AuthController::class)->group(function() {
         Route::get('/login', 'showLoginForm')->name('login');
         Route::post('/login', 'login');
 
-        // RUTAS DE MICROSOFT AZURE (SSO)
+        // RUTAS OPCIONALES DE MICROSOFT AZURE (SSO)
         Route::get('/auth/azure', 'redirectToAzure')->name('login.azure');
         Route::get('/auth/azure/callback', 'handleAzureCallback');
     });
@@ -38,40 +43,45 @@ Route::middleware('guest')->group(function () {
 
 
 // =========================================================================
-// 2. RUTAS PROTEGIDAS (Usuarios Autenticados)
+// 3. RUTAS PROTEGIDAS (Usuarios Autenticados)
 // =========================================================================
 Route::middleware(['auth'])->group(function () {
 
-    // --- SESIÓN ---
+    // --- SESIÓN Y SALIDA ---
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // --- DASHBOARD PRINCIPAL ---
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // --- PERFIL DEL USUARIO ---
+    // --- PERFIL DEL USUARIO (Edición Propia) ---
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/perfil/edit', 'edit')->name('profile.edit');
         Route::put('/perfil/update', 'update')->name('profile.update');
     });
 
-    // --- GESTIÓN DE PERSONAL (Privilegiado) ---
+    // --- GESTIÓN DE PERSONAL (Solo Personal Autorizado) ---
     Route::controller(PersonalController::class)
         ->middleware('can:gestionar_personal') 
         ->group(function () {
+            // Listado y Creación
             Route::get('/personal', 'index')->name('personal.index');
             Route::get('/personal/crear', 'create')->name('personal.create'); 
             Route::post('/personal', 'store')->name('personal.store');
             
-            Route::post('/personal/{id}/status', 'toggleStatus')->name('personal.status');
+            // Acciones de Estado y Cuentas (Nombres ajustados para las vistas)
+            Route::post('/personal/{id}/toggle', 'toggleStatus')->name('personal.toggle');
             Route::post('/personal/{id}/crear-usuario', 'createUser')->name('personal.create_user');
             Route::post('/personal/{id}/revocar-usuario', 'revokeUser')->name('personal.revoke');
     });
 
-    // --- VISTAS PÚBLICAS DE PERSONAL (Solo Lectura) ---
+    // --- VISTAS PÚBLICAS DE PERSONAL (Solo Lectura / Kardex) ---
+    // Estas rutas están fuera del middleware 'gestionar_personal' para que el 
+    // propio docente pueda ver su información.
     Route::get('/personal/{id}', [PersonalController::class, 'show'])->name('personal.show');
     Route::get('/personal/{id}/imprimir', [PersonalController::class, 'printInformacion'])->name('personal.print');
 
-    // --- CARGA ACADÉMICA ---
+
+    // --- ACADÉMICO: CARGA HORARIA ---
     Route::controller(CargaAcademicaController::class)
         ->middleware('can:asignar_carga')
         ->group(function () {
@@ -79,37 +89,42 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/carga', 'store')->name('carga.store');
         });
 
-    // --- FORMACIÓN DOCENTE ---
+
+    // --- FORMACIÓN DOCENTE (Registro de Títulos) ---
     Route::post('/formacion', [FormacionController::class, 'store'])->name('formacion.store');
 
+
     // =========================================================================
-    // 3. ANALÍTICA Y REPORTES (POWER BI & DOCUMENTACIÓN)
+    // 4. ANALÍTICA Y REPORTES (Power BI & Documentación Institucional)
     // =========================================================================
     Route::middleware('can:ver_dashboard')->group(function () {
         
-        // Reporte 1: Grados Académicos
+        // Dashboards con Power BI Embebido
         Route::view('/analitica/acreditacion', 'reporte-bi')->name('analitica.acreditacion');
-
-        // Reporte 2: Profesión y Contratos
         Route::view('/analitica/corporativo', 'powerbi')->name('analitica.powerbi_show');
 
-        // [NUEVO] REPORTE DE PRESENTACIÓN (PDF ESTÁTICO)
-        // Esta ruta carga la vista 'reporte.blade.php' que visualiza el PDF
-        // Reporte 1: Presentación Final (El que ya tenías)
-Route::get('/analitica/presentacion-final', function () {
-    return view('reporte', [
-        'archivo' => 'reporte_presentacion.pdf', 
-        'titulo' => 'Presentación de Acreditación'
-    ]);
-})->name('reporte.pdf');
+        // Visores de PDF (Reportes Estáticos)
+        Route::get('/analitica/presentacion-final', function () {
+            return view('reporte', [
+                'archivo' => 'reporte_presentacion.pdf', 
+                'titulo' => 'Presentación de Acreditación'
+            ]);
+        })->name('reporte.pdf');
 
-// Reporte 2: Infografía de Inversión (El nuevo PDF azul)
-Route::get('/analitica/inversion-profesional', function () {
-    return view('reporte', [
-        'archivo' => 'Infografía de datos Oportunidades de Inversión Profesional Corporativo Azul (1).pdf', 
-        'titulo' => 'Inversión Profesional'
-    ]);
-})->name('reporte.inversion');
+        Route::get('/analitica/inversion-profesional', function () {
+            return view('reporte', [
+                'archivo' => 'Infografía de datos Oportunidades de Inversión Profesional Corporativo Azul (1).pdf', 
+                'titulo' => 'Inversión Profesional'
+            ]);
+        })->name('reporte.inversion');
+    });
+
+    // Herramienta de Diagnóstico (Opcional)
+    Route::get('/test-config', function() {
+        return response()->json([
+            'auth_user' => Auth::user()->Email,
+            'cargo' => Auth::user()->personal->cargo->NombreCargo ?? 'Sin Cargo'
+        ]);
     });
 
 });
