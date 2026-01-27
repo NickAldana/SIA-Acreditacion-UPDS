@@ -13,41 +13,35 @@ class Cargo extends Model
     protected $primaryKey = 'IdCargo';
     public $timestamps = false;
 
-    protected $fillable = ['NombreCargo'];
+    // 1. AGREGAMOS LA NUEVA COLUMNA AQUI
+    // Esto permite que Laravel lea y escriba el nivel desde la base de datos
+    protected $fillable = [
+        'NombreCargo', 
+        'nivel_jerarquico' 
+    ];
 
-    // 1. Relación con Personal (Un cargo tiene muchas personas)
+    // 2. ASEGURAMOS QUE SIEMPRE SEA UN NUMERO
+    protected $casts = [
+        'nivel_jerarquico' => 'integer',
+    ];
+
+    // Relación con Personal
     public function personal()
     {
         return $this->hasMany(Personal::class, 'IdCargo', 'IdCargo');
     }
 
-    // 2. RELACIÓN DE SEGURIDAD (Muchos a Muchos)
-    // Esto permite hacer: $cargo->permisos
+    // Relación de Permisos
     public function permisos()
     {
-        return $this->belongsToMany(
-            Permiso::class,      // El modelo final
-            'CargoPermiso',      // La tabla intermedia en SQL
-            'IdCargo',           // La llave foránea de este modelo en la pivote
-            'IdPermiso'          // La llave foránea del otro modelo en la pivote
-        );
+        return $this->belongsToMany(Permiso::class, 'CargoPermiso', 'IdCargo', 'IdPermiso');
     }
 
-    // 3. Helper para Jerarquía (Para evitar que un Jefe edite a un Rector)
-    public function getNivelJerarquicoAttribute()
+    // 3. ACCESOR AUTOMÁTICO
+    // Ya no usamos "switch". Simplemente devolvemos el valor que
+    // insertaste en la base de datos con tu script SQL.
+    public function getNivelJerarquicoAttribute($value)
     {
-        // Definimos niveles duros basados en el ID o Nombre
-        // Rector(1)/Vice(2) > Decano(3) > Jefe(4) > Docente(5)
-        // Damos un valor numérico: Mayor número = Menor jerarquía (o al revés, como prefieras)
-        
-        // Usemos: Nivel Alto = Número Alto (Rector=100, Docente=10)
-        switch ($this->IdCargo) {
-            case 1: return 100; // Rector
-            case 2: return 90;  // Vicerrector
-            case 3: return 80;  // Decano
-            case 4: return 50;  // Jefe de Carrera
-            case 5: return 10;  // Docente
-            default: return 0;
-        }
+        return $value ?? 0; // Si es nulo, devuelve 0 por seguridad
     }
 }

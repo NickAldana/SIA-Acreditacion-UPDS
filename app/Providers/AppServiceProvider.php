@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Event; // Importante para Socialite
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\DB;   // <--- NECESARIO PARA LEER SQL
+use Illuminate\Support\Facades\URL;
 use App\Models\User;
-use SocialiteProviders\Manager\SocialiteWasCalled; // Requiere el paquete de Azure
+use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Azure\AzureExtendSocialite;
 
 class AppServiceProvider extends ServiceProvider
@@ -18,53 +20,38 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-         if (config('app.env') === 'production') {
-        \Illuminate\Support\Facades\URL::forceScheme('https');
-    }
-        // --------------------------------------------------------------------
-        // 1. REGISTRO DEL DRIVER DE AZURE (SOCIALITE)
-        // --------------------------------------------------------------------
-        // Este listener "enseña" a Laravel a hablar con Microsoft Azure
+        // 1. FORZAR HTTPS EN PRODUCCIÓN (Seguridad)
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
+
+        // 2. SOCIALITE / AZURE (Login con Microsoft)
         Event::listen(SocialiteWasCalled::class, [AzureExtendSocialite::class, 'handle']);
 
-        // --------------------------------------------------------------------
-        // 2. GATE GLOBAL (Super Admin)
-        // --------------------------------------------------------------------
-        // Si el usuario tiene 'acceso_total' (Rector/Vice), se abren todas las puertas[cite: 44, 45].
+        // 3. SUPER ADMIN (Rector / Vicerrector)
+        // Esta "Puerta Maestra" se ejecuta antes que cualquier otra.
+        // Si tienes 'acceso_total', no pregunta nada más. Pase VIP.
         Gate::before(function (User $user, $ability) {
             if ($user->canDo('acceso_total')) {
-                return true;
+                return true; 
             }
         });
 
-        // --------------------------------------------------------------------
-        // 3. GATES ESPECÍFICOS (Permisos de Acreditación)
-        // --------------------------------------------------------------------
-        
-        Gate::define('gestionar_personal', function (User $user) {
-            return $user->canDo('gestionar_personal'); // [cite: 44]
-        });
+        // 4. GATES DINÁMICOS (La Magia de la Base de Datos)
+        // En lugar de escribir Gate::define 20 veces, hacemos un bucle.
+        try {
+            // Verificamos conexión para no romper comandos de consola si no hay BD
+            // Usamos una consulta ligera solo a la tabla de catálogo
+            $permisos = DB::table('Permisos')->pluck('NombrePermiso'); 
 
-        Gate::define('asignar_carga', function (User $user) {
-            return $user->canDo('asignar_carga'); // [cite: 44]
-        });
+            foreach ($permisos as $permiso) {
+                Gate::define($permiso, function (User $user) use ($permiso) {
+                    return $user->canDo($permiso);
+                });
+            }
 
-        Gate::define('ver_dashboard', function (User $user) {
-            return $user->canDo('ver_dashboard'); // [cite: 44]
-        });
-        
-        Gate::define('ver_kardex_global', function (User $user) {
-            return $user->canDo('ver_kardex_global'); // [cite: 44, 47]
-        });
-
-        Gate::define('ver_kardex_propio', function (User $user) {
-            return $user->canDo('ver_kardex_propio'); // [cite: 44, 49]
-        });
-
-        Gate::define('ver_indicadores', function (User $user) {
-            return $user->canDo('ver_indicadores') || $user->canDo('ver_dashboard');
-        });
-        
+        } catch (\Exception $e) {
+            // Si la tabla no existe aún (migraciones) o no hay conexión, ignoramos.
+        }
     }
-   
 }
