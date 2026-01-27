@@ -38,4 +38,4 @@ EXPOSE 80
 
 # 8. COMANDO DE INICIO (Usa la variable $PORT de Railway)
 # Limpiamos caché al arrancar para asegurar que tome las variables de Railway y no las de tu PC
-CMD php artisan config:clear && php artisan serve --host=0.0.0.0 --port=${PORT:-80}
+CMD php artisan storage:link && php artisan config:clear && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
