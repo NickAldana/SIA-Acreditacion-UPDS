@@ -1,5 +1,5 @@
 # Usamos la imagen oficial de PHP con FPM
-FROM php:8.2-fpm
+FROM php:8.2-cli
 
 # Instalar dependencias del sistema y herramientas de Microsoft para SQL Server
 RUN apt-get update && apt-get install -y \
