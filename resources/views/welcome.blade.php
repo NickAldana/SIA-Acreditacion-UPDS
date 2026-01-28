@@ -1,237 +1,288 @@
-@extends('layouts.app')
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SIA UPDS | Modelo AgileQ++</title>
+    
+    {{-- TAILWIND CSS (Versión CDN para diseño moderno instantáneo) --}}
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    {{-- FUENTE INTER (Estándar en diseño de interfaces modernas) --}}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    {{-- ICONOS --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-@section('content')
-<style>
-    /* Reset & Base */
-    .sia-auth-bg {
-        display: block !important;
-        padding: 0 !important;
-        background-color: #ffffff !important;
-        overflow-y: auto !important;
-    }
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        upds: {
+                            blue: '#003566',
+                            dark: '#001d36',
+                            gold: '#ffc300',
+                            light: '#f0f4f8'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 
-    :root {
-        --upds-blue: #003566;
-        --upds-gold: #ffc300;
-        --text-main: #1e293b;
-    }
+    <style>
+        /* Efectos de Vidrio y Gradientes */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px rgba(0, 53, 102, 0.08);
+        }
+        .hero-pattern {
+            background-color: #ffffff;
+            background-image: radial-gradient(#003566 0.5px, transparent 0.5px), radial-gradient(#003566 0.5px, #ffffff 0.5px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            opacity: 0.03;
+        }
+        .text-gradient {
+            background: linear-gradient(to right, #003566, #0056b3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        /* Animación suave de entrada */
+        @keyframes floatUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter {
+            animation: floatUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-600 antialiased selection:bg-upds-gold selection:text-upds-blue bg-slate-50">
 
-    .bg-upds-blue { background-color: var(--upds-blue) !important; }
-    .text-upds-blue { color: var(--upds-blue); }
-    .text-upds-gold { color: var(--upds-gold); }
-
-    .btn-upds-gold {
-        background-color: var(--upds-gold);
-        color: var(--upds-blue);
-        font-weight: 800;
-        letter-spacing: .05em;
-        transition: all .2s ease;
-        border: none;
-    }
-
-    .btn-upds-gold:hover {
-        background-color: #e6b000;
-        box-shadow: 0 4px 12px rgba(255,195,0,0.3);
-        transform: translateY(-1px);
-    }
-
-    /* Mejora de tarjetas */
-    .feature-card {
-        transition: all 0.3s ease;
-        border: 2px solid #f8fafc;
-    }
-    .feature-card:hover {
-        border-color: var(--upds-gold);
-        background-color: #ffffff;
-        box-shadow: 0 10px 30px rgba(0, 53, 102, 0.05);
-    }
-</style>
-
-<div class="flex flex-col min-h-screen font-sans">
+    {{-- FONDO DECORATIVO --}}
+    <div class="fixed inset-0 hero-pattern z-0 pointer-events-none"></div>
+    <div class="fixed top-0 right-0 w-2/3 h-full bg-gradient-to-l from-blue-50/50 to-transparent z-0 pointer-events-none"></div>
 
     {{-- NAVBAR --}}
-    <nav class="sticky top-0 z-50 bg-upds-blue shadow-lg">
-        <div class="max-w-[1400px] mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <i class="bi bi-mortarboard-fill text-upds-gold fs-2"></i>
-                <div class="border-l border-white/20 pl-4">
-                    <span class="block font-black text-white text-xl leading-none">SIA</span>
-                    <span class="text-[10px] font-bold text-white/60 uppercase tracking-widest">UPDS • Santa Cruz</span>
+    <nav class="fixed w-full z-50 transition-all duration-300 bg-white/80 backdrop-blur-md border-b border-slate-200/60">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                {{-- LOGO --}}
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-upds-blue text-upds-gold flex items-center justify-center rounded-xl shadow-lg shadow-blue-900/20">
+                        <i class="bi bi-mortarboard-fill text-xl"></i>
+                    </div>
+                    <div class="leading-tight">
+                        <span class="block font-black text-upds-blue text-lg tracking-tight">SIA <span class="text-upds-gold">.</span></span>
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">UPDS Santa Cruz</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="flex items-center gap-8">
-                <div class="hidden md:flex gap-8 font-bold uppercase text-xs tracking-wider">
-                    <a href="#modelo" class="text-white hover:text-upds-gold no-underline transition">Modelo</a>
-                    <a href="#contacto" class="text-white hover:text-upds-gold no-underline transition">Institucional</a>
+                {{-- MENÚ ESCRITORIO --}}
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#modelo" class="text-sm font-semibold text-slate-600 hover:text-upds-blue transition-colors">Modelo AgileQ++</a>
+                    <a href="#indicadores" class="text-sm font-semibold text-slate-600 hover:text-upds-blue transition-colors">Indicadores</a>
+                    
+                    {{-- BOTÓN ACCESO --}}
+                    <a href="{{ route('login') }}" class="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 bg-upds-blue font-pj rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-upds-blue hover:bg-upds-dark shadow-md hover:shadow-lg">
+                        <span class="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black"></span>
+                        <span class="relative flex items-center gap-2">
+                            Acceso al Sistema <i class="bi bi-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                        </span>
+                    </a>
                 </div>
-                <a href="{{ route('login') }}" class="btn-upds-gold px-6 py-2 rounded-lg text-xs no-underline uppercase shadow-sm">
-                    Acceso al Sistema
-                </a>
             </div>
         </div>
     </nav>
 
-    {{-- HERO --}}
-    <header class="relative bg-slate-50 py-16 lg:py-28 overflow-hidden border-b">
-        <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
-            
-            <div>
-                <div class="inline-block px-4 py-1 mb-6 rounded-md bg-upds-blue text-upds-gold text-[10px] font-bold uppercase tracking-widest shadow-sm">
-                    Vicerrectorado Académico
-                </div>
+    {{-- HERO SECTION --}}
+    <main class="relative z-10 pt-32 pb-16 lg:pt-48 lg:pb-32">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="grid lg:grid-cols-12 gap-16 items-center">
                 
-                <h1 class="font-black text-upds-blue leading-tight text-5xl md:text-7xl mb-6">
-                    Modelo <br><span class="text-upds-gold">AgileQ++</span>
-                </h1>
-
-                <p class="text-xl text-gray-700 font-bold mb-4 leading-snug">
-                    Gestión estratégica de indicadores para procesos de <span class="text-upds-blue border-b-4 border-upds-gold">acreditación y calidad educativa</span>.
-                </p>
-
-                <p class="text-gray-600 text-lg mb-10 max-w-xl leading-relaxed">
-                    Plataforma diseñada para la integración y visualización de datos académicos, facilitando la toma de decisiones basada en evidencia.
-                </p>
-
-                <div class="flex flex-wrap gap-4">
-                    <a href="{{ route('login') }}" class="btn-upds-gold px-10 py-4 rounded-xl text-sm no-underline flex items-center gap-3 shadow-lg hover:shadow-xl transition-all">
-                        EXPLORAR PLATAFORMA <i class="bi bi-arrow-right"></i>
-                    </a>
-                </div>
-            </div>
-
-            {{-- TARJETA DE CAPACIDADES --}}
-            <div class="hidden lg:flex justify-end">
-                <div class="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100 relative overflow-hidden max-w-sm">
-                    <div class="absolute -top-10 -right-10 bg-upds-blue/5 w-40 h-40 rounded-full"></div>
+                {{-- COLUMNA IZQUIERDA: TEXTO --}}
+                <div class="lg:col-span-6 animate-enter">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-upds-blue text-xs font-bold uppercase tracking-wider mb-6">
+                        <span class="w-2 h-2 rounded-full bg-upds-gold animate-pulse"></span>
+                        Vicerrectorado Académico
+                    </div>
                     
-                    <div class="relative">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="bg-upds-gold text-upds-blue text-[9px] px-2 py-0.5 rounded font-black tracking-tighter">DESARROLLO SISTEMA</span>
-                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">SIA v4.0</span>
-                        </div>
-                        
-                        <h3 class="font-black text-upds-blue text-2xl mb-1">Panel de Control</h3>
-                        <p class="text-xs text-blue-600 font-bold uppercase tracking-tight mb-4">Análisis de Datos UPDS</p>
-                        
-                        <hr class="border-gray-100 my-4">
-                        
-                        <ul class="space-y-4">
-                            <li class="flex items-start gap-3">
-                                <div class="mt-1 bg-green-100 rounded-full p-1 shrink-0">
-                                    <i class="bi bi-check2 text-green-600 text-xs"></i>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-gray-800 mb-0 leading-none">Alineación Estratégica</p>
-                                    <p class="text-[11px] text-gray-500 mt-1">Soporte a procesos de autoevaluación interna.</p>
-                                </div>
-                            </li>
-                            <li class="flex items-start gap-3">
-                                <div class="mt-1 bg-blue-100 rounded-full p-1 shrink-0">
-                                    <i class="bi bi-bar-chart-fill text-blue-600 text-xs"></i>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-gray-800 mb-0 leading-none">Inteligencia de Datos</p>
-                                    <p class="text-[11px] text-gray-500 mt-1">Métricas de 3ra generación y visualización BI.</p>
-                                </div>
-                            </li>
-                            <li class="flex items-start gap-3">
-                                <div class="mt-1 bg-purple-100 rounded-full p-1 shrink-0">
-                                    <i class="bi bi-database-fill-gear text-purple-600 text-xs"></i>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-gray-800 mb-0 leading-none">Gestión Académica</p>
-                                    <p class="text-[11px] text-gray-500 mt-1">Integración modular con registros institucionales.</p>
-                                </div>
-                            </li>
-                        </ul>
+                    <h1 class="text-5xl lg:text-7xl font-black text-slate-900 leading-tight tracking-tight mb-6">
+                        Modelo <br>
+                        <span class="text-gradient">AgileQ++</span>
+                    </h1>
+                    
+                    <p class="text-xl text-slate-600 mb-8 leading-relaxed font-medium">
+                        Gestión estratégica de indicadores para la <span class="text-upds-blue font-bold decoration-upds-gold underline decoration-4 underline-offset-4">Acreditación y Calidad Educativa</span>. Toma de decisiones basada en evidencia.
+                    </p>
 
-                        <div class="mt-6 p-3 bg-slate-50 rounded-xl border border-dashed border-gray-200">
-                            <p class="text-[10px] text-gray-400 font-bold italic text-center uppercase tracking-tighter mb-0">
-                                "Transformando datos en excelencia académica"
-                            </p>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="{{ route('login') }}" class="inline-flex justify-center items-center px-8 py-4 text-base font-bold text-upds-blue bg-upds-gold rounded-2xl hover:bg-yellow-400 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+                            <i class="bi bi-grid-fill mr-2"></i> Explorar Plataforma
+                        </a>
+                        <a href="#features" class="inline-flex justify-center items-center px-8 py-4 text-base font-bold text-slate-600 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all hover:border-slate-300">
+                            Ver Documentación
+                        </a>
+                    </div>
+
+                    <div class="mt-12 flex items-center gap-4 text-sm font-medium text-slate-500">
+                        <div class="flex -space-x-2">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-xs">AI</div>
+                            <div class="w-8 h-8 rounded-full bg-slate-300 border-2 border-white flex items-center justify-center text-xs">BI</div>
+                            <div class="w-8 h-8 rounded-full bg-slate-400 border-2 border-white flex items-center justify-center text-xs">QS</div>
                         </div>
+                        <p>Validado por estándares internacionales</p>
+                    </div>
+                </div>
+
+                {{-- COLUMNA DERECHA: DASHBOARD PREVIEW (Estilo Figma) --}}
+                <div class="lg:col-span-6 relative perspective-1000 animate-enter" style="animation-delay: 0.2s">
+                    
+                    {{-- Elementos Decorativos de Fondo --}}
+                    <div class="absolute -top-12 -right-12 w-64 h-64 bg-upds-gold/20 rounded-full blur-3xl"></div>
+                    <div class="absolute -bottom-12 -left-12 w-64 h-64 bg-upds-blue/10 rounded-full blur-3xl"></div>
+
+                    {{-- CONTENEDOR PRINCIPAL DEL MOCKUP --}}
+                    <div class="relative glass-panel rounded-3xl p-6 transform rotate-y-6 hover:rotate-0 transition-transform duration-500 ease-out">
+                        
+                        {{-- Mockup Header --}}
+                        <div class="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
+                            <div>
+                                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Reporte en tiempo real</div>
+                                <div class="text-lg font-bold text-slate-800">Desempeño Académico</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="w-3 h-3 rounded-full bg-red-400"></span>
+                                <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+                                <span class="w-3 h-3 rounded-full bg-green-400"></span>
+                            </div>
+                        </div>
+
+                        {{-- Mockup Widgets Grid --}}
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            {{-- Widget 1 --}}
+                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-upds-blue flex items-center justify-center">
+                                        <i class="bi bi-people-fill"></i>
+                                    </div>
+                                    <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">+12%</span>
+                                </div>
+                                <div class="text-2xl font-black text-slate-800">92%</div>
+                                <div class="text-xs text-slate-500 font-medium">Retención Estudiantil</div>
+                            </div>
+
+                            {{-- Widget 2 --}}
+                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="w-8 h-8 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center">
+                                        <i class="bi bi-award-fill"></i>
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-400">Anual</span>
+                                </div>
+                                <div class="text-2xl font-black text-slate-800">4.8</div>
+                                <div class="text-xs text-slate-500 font-medium">Índice de Calidad</div>
+                            </div>
+                        </div>
+
+                        {{-- Mockup Chart Area --}}
+                        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="text-xs font-bold text-slate-600">Proyección de Acreditación</div>
+                                <div class="text-[10px] font-bold text-upds-blue bg-blue-100 px-2 py-0.5 rounded">META 2026</div>
+                            </div>
+                            <div class="h-24 flex items-end justify-between gap-2">
+                                <div class="w-full bg-upds-blue/10 rounded-t-sm h-[40%]"></div>
+                                <div class="w-full bg-upds-blue/20 rounded-t-sm h-[60%]"></div>
+                                <div class="w-full bg-upds-blue/40 rounded-t-sm h-[50%]"></div>
+                                <div class="w-full bg-upds-blue/60 rounded-t-sm h-[75%]"></div>
+                                <div class="w-full bg-upds-blue rounded-t-sm h-[90%] relative group cursor-pointer">
+                                    <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                        Objetivo Cumplido
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Floating Badge --}}
+                        <div class="absolute -right-6 top-1/2 bg-white p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 animate-bounce" style="animation-duration: 3s;">
+                            <div class="bg-green-500 w-2 h-2 rounded-full animate-ping"></div>
+                            <div>
+                                <div class="text-xs font-bold text-slate-800">Sincronización</div>
+                                <div class="text-[10px] text-slate-500">Datos actualizados hace 2m</div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
         </div>
-    </header>
+    </main>
 
-    {{-- PILARES --}}
-    <section id="modelo" class="py-20 bg-white">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="font-black text-upds-blue text-3xl uppercase tracking-tight mb-2">Pilares del Sistema</h2>
-                <div class="w-20 h-1.5 bg-upds-gold mx-auto rounded-full"></div>
+    {{-- SECCIÓN DE CARACTERÍSTICAS (Grid Limpio) --}}
+    <section class="py-24 bg-white border-t border-slate-100" id="features">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <h2 class="text-3xl font-black text-slate-900 mb-4">Arquitectura de Datos Institucional</h2>
+                <p class="text-slate-500">El modelo AgileQ++ integra múltiples fuentes de información para generar una visión holística del desempeño universitario.</p>
             </div>
-            
+
             <div class="grid md:grid-cols-3 gap-8">
-                <div class="feature-card p-8 rounded-2xl bg-slate-50">
-                    <i class="bi bi-lightning-charge-fill text-upds-blue fs-1 mb-4 block"></i>
-                    <h4 class="font-black text-upds-blue text-xl mb-3">Gestión Ágil</h4>
-                    <p class="text-gray-600 font-medium text-sm leading-relaxed">Optimización de procesos académicos y administrativos orientados al talento humano de la sede.</p>
+                {{-- Feature 1 --}}
+                <div class="p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:border-upds-gold hover:bg-white hover:shadow-xl transition-all duration-300 group">
+                    <div class="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center text-upds-blue text-xl mb-6 group-hover:bg-upds-blue group-hover:text-white transition-colors">
+                        <i class="bi bi-diagram-3-fill"></i>
+                    </div>
+                    <h3 class="font-bold text-xl text-slate-900 mb-3">Gestión de Procesos</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">
+                        Automatización de flujos de trabajo académicos y administrativos, reduciendo la carga operativa.
+                    </p>
                 </div>
 
-                <div class="p-8 rounded-2xl bg-upds-blue text-white shadow-xl transform md:-translate-y-2">
-                    <i class="bi bi-graph-up text-upds-gold fs-1 mb-4 block"></i>
-                    <h4 class="font-black text-xl mb-3">Indicadores 3G</h4>
-                    <p class="text-blue-100 font-medium text-sm leading-relaxed">Métricas avanzadas para el seguimiento de formación, investigación y pertinencia institucional.</p>
+                {{-- Feature 2 --}}
+                <div class="p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:border-upds-gold hover:bg-white hover:shadow-xl transition-all duration-300 group">
+                    <div class="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center text-upds-blue text-xl mb-6 group-hover:bg-upds-blue group-hover:text-white transition-colors">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h3 class="font-bold text-xl text-slate-900 mb-3">Analítica Predictiva</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">
+                        Algoritmos que anticipan tendencias en retención y rendimiento estudiantil para intervenir a tiempo.
+                    </p>
                 </div>
 
-                <div class="feature-card p-8 rounded-2xl bg-slate-50">
-                    <i class="bi bi-shield-check text-upds-blue fs-1 mb-4 block"></i>
-                    <h4 class="font-black text-upds-blue text-xl mb-3">Calidad Educativa</h4>
-                    <p class="text-gray-600 font-medium text-sm leading-relaxed">Soporte técnico para el cumplimiento de estándares institucionales de calidad y mejora continua.</p>
+                {{-- Feature 3 --}}
+                <div class="p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:border-upds-gold hover:bg-white hover:shadow-xl transition-all duration-300 group">
+                    <div class="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center text-upds-blue text-xl mb-6 group-hover:bg-upds-blue group-hover:text-white transition-colors">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <h3 class="font-bold text-xl text-slate-900 mb-3">Acreditación Continua</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">
+                        Repositorio digital de evidencias alineado con los estándares de evaluación de la calidad.
+                    </p>
                 </div>
             </div>
         </div>
     </section>
 
-    {{-- FOOTER --}}
-    <footer id="contacto" class="bg-upds-blue text-white pt-16 pb-8 mt-auto">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="grid md:grid-cols-3 gap-12 border-b border-white/10 pb-12">
-                
-                <div>
-                    <div class="flex items-center gap-3 mb-6">
-                        <i class="bi bi-mortarboard-fill text-upds-gold fs-2"></i>
-                        <span class="font-black text-2xl tracking-tighter">SIA UPDS</span>
-                    </div>
-                    <p class="text-blue-100 font-medium text-sm leading-relaxed">
-                        Sistema Integrado de Acreditación. Herramienta estratégica para el aseguramiento de la calidad en la UPDS Santa Cruz.
-                    </p>
-                </div>
-
-                <div>
-                    <h5 class="text-upds-gold font-black text-xs tracking-[.2em] mb-6 uppercase">Ubicación y Sede</h5>
-                    <p class="text-white mb-1 font-bold text-sm">Av. Beni y 3er Anillo Interno</p>
-                    <p class="text-blue-200 text-sm">Santa Cruz de la Sierra, Bolivia</p>
-                </div>
-
-                <div class="md:text-right">
-                    <h5 class="text-upds-gold font-black text-xs tracking-[.2em] mb-6 uppercase">SIA v4.0</h5>
-                    <p class="text-blue-100 font-bold text-sm">Vicerrectorado Académico</p>
-                    <div class="flex md:justify-end gap-4 mt-4 text-xl text-white/80">
-                        <i class="bi bi-facebook cursor-pointer hover:text-upds-gold transition"></i>
-                        <i class="bi bi-globe cursor-pointer hover:text-upds-gold transition"></i>
-                        <i class="bi bi-linkedin cursor-pointer hover:text-upds-gold transition"></i>
-                    </div>
-                </div>
+    {{-- FOOTER SIMPLE --}}
+    <footer class="bg-upds-blue text-white py-12 border-t border-white/10">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-3">
+                <i class="bi bi-mortarboard-fill text-upds-gold text-2xl"></i>
+                <span class="font-bold text-lg tracking-tight">SIA UPDS <span class="text-white/50 font-normal text-sm">v4.0</span></span>
             </div>
-
-            <div class="mt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-[10px] font-bold text-blue-300 uppercase tracking-widest">
-                    © {{ date('Y') }} Universidad Privada Domingo Savio
-                </p>
-                <div class="flex items-center gap-2">
-                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    <p class="text-[10px] text-blue-400 font-bold uppercase mb-0">
-                        SIA Intelligence System v4.0
-                    </p>
-                </div>
-            </div>
+            <p class="text-sm text-blue-200">
+                &copy; {{ date('Y') }} Universidad Privada Domingo Savio. Todos los derechos reservados.
+            </p>
         </div>
     </footer>
 
-</div>
-@endsection
+</body>
+</html>

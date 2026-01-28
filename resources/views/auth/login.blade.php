@@ -1,163 +1,164 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="sia-auth-wrapper animate__animated animate__fadeIn">
+{{-- Carga de recursos específicos para mantener consistencia visual con el Welcome --}}
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    /* Configuración de Identidad Visual */
+    :root {
+        --upds-blue: #003566;
+        --upds-gold: #ffc300;
+        --slate-50: #f8fafc;
+    }
     
-    {{-- Tarjeta de Login Compacta --}}
-    <div class="sia-compact-card">
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--slate-50);
+    }
+
+    /* Patrón de Fondo Tecnológico (Igual al Welcome) */
+    .login-bg-pattern {
+        background-image: radial-gradient(#003566 0.5px, transparent 0.5px), radial-gradient(#003566 0.5px, #f8fafc 0.5px);
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
+        opacity: 0.05;
+    }
+
+    /* Tarjeta de Vidrio/Moderna */
+    .login-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Inputs Personalizados */
+    .modern-input {
+        transition: all 0.3s ease;
+        background-color: #f1f5f9; /* Slate 100 */
+        border: 2px solid transparent;
+    }
+    .modern-input:focus {
+        background-color: #ffffff;
+        border-color: var(--upds-blue);
+        box-shadow: 0 0 0 4px rgba(0, 53, 102, 0.1);
+        outline: none;
+    }
+
+    /* Botón */
+    .btn-login {
+        background-image: linear-gradient(to right, var(--upds-blue), #004e92);
+        transition: all 0.3s ease;
+    }
+    .btn-login:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 15px -3px rgba(0, 53, 102, 0.3);
+    }
+</style>
+
+<div class="fixed inset-0 w-full h-full flex items-center justify-center p-4">
+    
+    {{-- Fondo Decorativo --}}
+    <div class="absolute inset-0 login-bg-pattern z-0 pointer-events-none"></div>
+    <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-blue-100/40 to-transparent z-0 pointer-events-none"></div>
+
+    {{-- Tarjeta Principal --}}
+    <div class="login-card w-full max-w-[400px] rounded-3xl overflow-hidden relative z-10 animate__animated animate__fadeInUp">
         
-        {{-- Cabecera Tighter (Más estrecha) --}}
-        <div class="sia-card-header-compact">
-            <div class="logo-box">
-                <i class="bi bi-mortarboard-fill text-upds-gold"></i>
+        {{-- Cabecera con Logo --}}
+        <div class="text-center pt-10 pb-6 px-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 text-[#003566] mb-4 shadow-sm border border-blue-100">
+                <i class="bi bi-mortarboard-fill text-3xl"></i>
             </div>
-            <h5 class="text-white font-black tracking-tighter mb-0 mt-2">SIA V4.0</h5>
-            <span class="text-white/40 text-[9px] font-bold uppercase tracking-widest">Portal de Acceso</span>
+            
+            <h2 class="text-2xl font-black text-slate-800 tracking-tight">Bienvenido</h2>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Plataforma SIA v4.0</p>
         </div>
 
-        <div class="card-body p-4 p-md-5 bg-white">
-            <div class="text-center mb-4">
-                <h6 class="font-black text-upds-blue mb-1">Identificación Administrativa</h6>
-                <p class="text-slate-400 text-[11px] font-medium">Ingrese sus credenciales del Vicerrectorado.</p>
-            </div>
-
+        {{-- Formulario --}}
+        <div class="px-8 pb-10">
             <form action="{{ route('login') }}" method="POST">
                 @csrf
 
-                {{-- Input Email --}}
-                <div class="form-floating mb-3">
-                    <input type="email" name="email" class="form-control sia-input @error('email') is-invalid @enderror" 
-                           id="floatingInput" placeholder="nombre@upds.edu.bo" value="{{ old('email') }}" required autofocus>
-                    <label for="floatingInput" class="text-slate-400">Correo Institucional</label>
+                {{-- Email --}}
+                <div class="mb-5">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">
+                        Credencial Institucional
+                    </label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="bi bi-envelope-fill text-slate-400 group-focus-within:text-[#003566] transition-colors"></i>
+                        </div>
+                        <input type="email" name="email" 
+                               class="modern-input w-full pl-11 pr-4 py-3.5 rounded-xl text-sm font-semibold text-slate-700 placeholder-slate-400" 
+                               placeholder="usuario@upds.net.bo" 
+                               value="{{ old('email') }}" required autofocus>
+                    </div>
                     @error('email')
-                        <div class="invalid-feedback font-bold text-[10px]">{{ $message }}</div>
+                        <span class="text-red-500 text-[10px] font-bold mt-1 block ml-1">{{ $message }}</span>
                     @enderror
                 </div>
 
-                {{-- Input Password --}}
-                <div class="input-group mb-4">
-                    <div class="form-floating flex-grow-1">
-                        <input type="password" name="password" class="form-control sia-input password-field @error('password') is-invalid @enderror" 
-                               id="passwordInput" placeholder="Contraseña" required>
-                        <label for="passwordInput" class="text-slate-400">Contraseña</label>
+                {{-- Contraseña --}}
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">
+                        Contraseña
+                    </label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="bi bi-key-fill text-slate-400 group-focus-within:text-[#003566] transition-colors"></i>
+                        </div>
+                        <input type="password" name="password" id="passwordInput"
+                               class="modern-input w-full pl-11 pr-12 py-3.5 rounded-xl text-sm font-semibold text-slate-700 placeholder-slate-400" 
+                               placeholder="••••••••" required>
+                        
+                        <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer">
+                            <i class="bi bi-eye-fill" id="toggleIcon"></i>
+                        </button>
                     </div>
-                    <span class="input-group-text sia-input-append" onclick="togglePassword()">
-                        <i class="bi bi-eye text-slate-400" id="toggleIcon"></i>
-                    </span>
                     @error('password')
-                        <div class="invalid-feedback d-block font-bold text-[10px]">{{ $message }}</div>
+                        <span class="text-red-500 text-[10px] font-bold mt-1 block ml-1">{{ $message }}</span>
                     @enderror
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-4 px-1">
-                    <div class="form-check">
-                        <input class="form-check-input sia-check" type="checkbox" name="remember" id="rememberCheck">
-                        <label class="form-check-label text-[11px] font-bold text-slate-500" for="rememberCheck">
-                            Recordarme
-                        </label>
-                    </div>
+                {{-- Recordarme + Botón --}}
+                <div class="flex items-center justify-between mb-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" name="remember" class="w-4 h-4 rounded border-slate-300 text-[#003566] focus:ring-[#003566]">
+                        <span class="ml-2 text-xs font-bold text-slate-500">Mantener sesión</span>
+                    </label>
+                    <a href="#" class="text-xs font-bold text-[#003566] hover:text-[#ffc300] transition-colors">
+                        ¿Problemas?
+                    </a>
                 </div>
 
-                {{-- Botón de Acción --}}
-                <button type="submit" class="btn btn-sia-primary-compact w-100">
-                    <i class="bi bi-shield-lock-fill me-2"></i> INGRESAR
+                <button type="submit" class="btn-login w-full py-4 rounded-xl text-white font-bold text-sm tracking-wide shadow-lg shadow-blue-900/20 relative overflow-hidden group">
+                    <span class="relative z-10 flex items-center justify-center gap-2">
+                        INGRESAR AL SISTEMA <i class="bi bi-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </span>
                 </button>
+
             </form>
         </div>
 
-        {{-- Footer Mini --}}
-        <div class="py-3 bg-slate-50 border-t text-center">
-            <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0">
-                UPDS Santa Cruz © {{ date('Y') }}
+        {{-- Footer Tarjeta --}}
+        <div class="bg-slate-50 border-t border-slate-100 p-4 text-center">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <i class="bi bi-shield-check text-green-500 mr-1"></i> Conexión Segura UPDS
             </p>
         </div>
     </div>
+    
+    {{-- Footer Copyright --}}
+    <div class="absolute bottom-6 text-center w-full">
+        <p class="text-[10px] font-medium text-slate-400">
+            &copy; {{ date('Y') }} Universidad Privada Domingo Savio. Todos los derechos reservados.
+        </p>
+    </div>
+
 </div>
-
-<style>
-    /* Estilos para el Login Compacto SIA V4.0 */
-    .sia-auth-wrapper {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100vh;
-        background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-    }
-
-    .sia-compact-card {
-        width: 100%;
-        max-width: 380px; /* Tamaño más compacto */
-        background: white;
-        border-radius: 1.5rem;
-        overflow: hidden;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-    }
-
-    .sia-card-header-compact {
-        background-color: var(--upds-blue);
-        padding: 2rem 1rem;
-        text-align: center;
-        border-bottom: 4px solid var(--upds-gold);
-    }
-
-    .logo-box {
-        font-size: 2.5rem;
-        line-height: 1;
-        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
-    }
-
-    .sia-input {
-        border: 2px solid #f1f5f9 !important;
-        background-color: #f8fafc !important;
-        border-radius: 12px !important;
-        font-size: 0.9rem !important;
-        font-weight: 600 !important;
-    }
-
-    .sia-input:focus {
-        border-color: var(--upds-gold) !important;
-        background-color: white !important;
-        box-shadow: 0 0 0 4px rgba(255, 195, 0, 0.1) !important;
-    }
-
-    .sia-input-append {
-        background: #f8fafc;
-        border: 2px solid #f1f5f9;
-        border-left: none;
-        border-radius: 0 12px 12px 0;
-        cursor: pointer;
-    }
-
-    .btn-sia-primary-compact {
-        background-color: var(--upds-blue);
-        color: white;
-        border: none;
-        padding: 12px;
-        border-radius: 12px;
-        font-weight: 900;
-        font-size: 0.8rem;
-        letter-spacing: 1px;
-        transition: all 0.3s;
-    }
-
-    .btn-sia-primary-compact:hover {
-        background-color: var(--upds-blue-dark);
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-        color: white;
-    }
-
-    .sia-check:checked {
-        background-color: var(--upds-gold);
-        border-color: var(--upds-gold);
-    }
-
-    .font-black { font-weight: 900; }
-    .tracking-tighter { letter-spacing: -0.05em; }
-</style>
 
 <script>
     function togglePassword() {
@@ -165,10 +166,10 @@
         const icon = document.getElementById('toggleIcon');
         if (passwordInput.type === 'password') {
             passwordInput.type = 'text';
-            icon.classList.replace('bi-eye', 'bi-eye-slash');
+            icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill');
         } else {
             passwordInput.type = 'password';
-            icon.classList.replace('bi-eye-slash', 'bi-eye');
+            icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill');
         }
     }
 </script>
