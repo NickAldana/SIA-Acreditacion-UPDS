@@ -162,8 +162,8 @@
                                      alt="CIEES" 
                                      class="h-10 w-auto object-contain hover:scale-105 transition-transform">
                                 <div class="leading-none">
-                                    <span class="block text-[9px] font-bold text-slate-400 uppercase">Validado por</span>
-                                    <span class="block text-xs font-black text-slate-700">CIEES</span>
+                                    <span class="block text-[9px] font-bold text-slate-400 uppercase"></span>
+                                    <span class="block text-xs font-black text-slate-700"></span>
                                 </div>
                             </div>
 
@@ -173,8 +173,8 @@
                                      alt="MERCOSUR" 
                                      class="h-10 w-auto object-contain hover:scale-105 transition-transform">
                                 <div class="leading-none">
-                                    <span class="block text-[9px] font-bold text-slate-400 uppercase">Miembro</span>
-                                    <span class="block text-xs font-black text-slate-700">Educativo</span>
+                                    <span class="block text-[9px] font-bold text-slate-400 uppercase"></span>
+                                    <span class="block text-xs font-black text-slate-700"></span>
                                 </div>
                             </div>
 
