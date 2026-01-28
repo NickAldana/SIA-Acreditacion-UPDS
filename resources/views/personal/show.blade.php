@@ -154,7 +154,7 @@
                         {{-- NUEVA PESTAÑA: PRODUCCIÓN --}}
                         <li class="nav-item">
                             <button class="nav-link" id="produccion-tab" data-bs-toggle="tab" data-bs-target="#produccion" type="button">
-                                <i class="bi bi-journal-richtext me-2"></i> Producción Literaria
+                                <i class="bi bi-journal-richtext me-2"></i> Producción Cientifica
                             </button>
                         </li>
                     </ul>

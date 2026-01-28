@@ -166,46 +166,51 @@
                 </div>
             </div>
 
-{{-- TARJETA DE USUARIO CON CARGA VELOZ --}}
-<div class="mb-8">
-    <div class="sia-nav-user-card p-4 group relative">
-        <div class="flex items-center">
-            <div class="relative">
-                @if($currentUser->personal && $currentUser->personal->FotoPerfil)
-                    {{-- Añadimos ?v=time() para forzar el refresco y loading=lazy para no bloquear el inicio --}}
-                    <img class="h-10 w-10 rounded-lg border border-white/20 object-cover shadow-lg bg-white" 
-                         src="{{ asset('storage/' . $currentUser->personal->FotoPerfil) }}?v={{ time() }}" 
-                         alt="Avatar"
-                         loading="lazy" 
-                         decoding="async">
-                @else
-                    <img class="h-10 w-10 rounded-lg border border-white/20 object-cover shadow-lg bg-white" 
-                         src="https://ui-avatars.com/api/?name={{ urlencode($currentUser->personal->NombreCompleto ?? 'U') }}&background=ffc300&color=003566" 
-                         alt="Avatar"
-                         loading="lazy">
-                @endif
-                
-                <span class="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500 border border-blue-900"></span>
-                </span>
+{{-- TARJETA DE USUARIO DEL SIDEBAR (Texto Ajustado) --}}
+<div class="mb-8 px-2">
+    <div class="bg-[#002855] rounded-2xl p-3 border border-white/10 shadow-lg relative group overflow-hidden">
+        {{-- Efecto de brillo sutil --}}
+        <div class="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+
+        <div class="flex items-center gap-3 relative z-10">
+            {{-- Avatar con Indicador --}}
+            <div class="relative shrink-0">
+                <div class="w-10 h-10 rounded-lg bg-white p-0.5 shadow-sm">
+                    @if($currentUser->personal && $currentUser->personal->FotoPerfil)
+                        <img class="w-full h-full rounded-md object-cover" 
+                             src="{{ asset('storage/' . $currentUser->personal->FotoPerfil) }}?v={{ time() }}" 
+                             alt="Avatar" loading="lazy">
+                    @else
+                        <img class="w-full h-full rounded-md object-cover" 
+                             src="https://ui-avatars.com/api/?name={{ urlencode($currentUser->personal->NombreCompleto ?? 'U') }}&background=ffc300&color=003566&bold=true" 
+                             alt="Avatar" loading="lazy">
+                    @endif
+                </div>
+                {{-- Punto Verde de Estado --}}
+                <span class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-[#002855] rounded-full"></span>
             </div>
             
-            <div class="ml-3 overflow-hidden flex-1">
-                <p class="text-xs font-bold text-white truncate leading-tight">
+            {{-- Info Usuario --}}
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-white leading-tight mb-1">
                     {{ $currentUser->personal ? explode(' ', $currentUser->personal->NombreCompleto)[0] : 'Usuario' }}
                 </p>
-                <p class="text-[10px] font-bold text-upds-gold truncate uppercase tracking-wider mt-0.5">
-                    {{ $currentUser->personal->cargo->NombreCargo ?? 'SIN CARGO' }}
+                
+                {{-- AQUÍ ESTÁ EL CAMBIO: Quitamos 'truncate' y permitimos salto de línea --}}
+                <p class="text-[10px] font-black text-upds-gold uppercase tracking-wider whitespace-normal leading-tight">
+                    {{ $currentUser->personal->cargo->NombreCargo ?? 'INVITADO' }}
                 </p>
             </div>
 
-            <a href="{{ route('profile.edit') }}" class="ml-1 text-white/40 hover:text-white transition-colors" title="Configurar">
-                <i class="bi bi-gear-fill"></i>
-            </a>
+            {{-- Icono Configuración (Alineado arriba para no estorbar si el texto crece) --}}
+            <div class="self-start">
+                <a href="{{ route('profile.edit') }}" class="text-slate-400 hover:text-white transition-colors p-1">
+                    <i class="bi bi-gear-fill text-sm"></i>
+                </a>
+            </div>
         </div>
     </div>
-</div>            {{-- MENÚ DE NAVEGACIÓN --}}
+</div>          {{-- MENÚ DE NAVEGACIÓN --}}
             <nav class="flex-1 space-y-2">
                 <div>
                     <p class="px-2 text-[10px] font-black text-blue-300/50 uppercase tracking-widest mb-2 mt-2">Plataforma</p>
