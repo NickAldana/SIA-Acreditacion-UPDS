@@ -162,62 +162,76 @@ public function toggleStatus($id)
     return view('personal.create', compact('tiposContrato', 'cargos', 'carreras', 'grados', 'carrerasTipicas'));
 }
 
-   public function store(Request $request)
+public function store(Request $request)
 {
-    // 1. VALIDACIONES (ArchivoTitulo ahora es opcional)
+    // 1. VALIDACIONES
     $request->validate([
         'IdCargo'          => 'required|exists:Cargo,IdCargo',
         'IdCarrera'        => 'required|exists:Carrera,IdCarrera',
         'NombreCompleto'   => 'required|string|min:3|max:200',
         'ApellidoPaterno'  => 'required|string|min:2|max:100',
+        'ApellidoMaterno'  => 'nullable|string|max:100',
         'CI'               => 'required|string|max:20|unique:Personal,CI',
+        'Genero'           => 'required|string|in:Masculino,Femenino',
+        'Telefono'         => 'nullable|string|max:20',
         'IdTipoContrato'   => 'required|exists:TipoContrato,IdTipoContrato',
         'IdGradoAcademico' => 'required|exists:GradoAcademico,IdGradoAcademico',
+        
+        // AÑOS DE EXPERIENCIA (Faltaba validar)
+        'AniosExperiencia' => 'nullable|string|max:50', 
+
         'TituloObtenido'   => 'required|string|min:3|max:300',
         'AñoEstudios'      => 'required|integer|min:1950|max:' . date('Y'),
-        'ArchivoTitulo'    => 'nullable|file|mimes:pdf|max:5120', // Opcional, máx 5MB
+        'ArchivoTitulo'    => 'nullable|file|mimes:pdf|max:5120',
     ]);
 
     DB::beginTransaction();
     try {
-        // 2. SANITIZACIÓN (Nick brandon -> Nick Brandon)
+        // 2. SANITIZACIÓN
         $nombreLimpio   = Str::title(trim($request->NombreCompleto)); 
         $paternoLimpio  = Str::title(trim($request->ApellidoPaterno));
         $maternoLimpio  = $request->ApellidoMaterno ? Str::title(trim($request->ApellidoMaterno)) : null;
 
-        // 3. GENERACIÓN DE CORREO (sc.nick.perez.m@upds.net.bo)
+        // 3. GENERACIÓN DE CORREO
         $primerNombreSlug = Str::slug(explode(' ', $nombreLimpio)[0]); 
         $paternoSlug      = Str::slug($paternoLimpio);
         $inicialMaterno   = $maternoLimpio ? substr(Str::slug($maternoLimpio), 0, 1) : '';
         $emailGenerado    = "sc.{$primerNombreSlug}.{$paternoSlug}" . ($inicialMaterno ? ".{$inicialMaterno}" : "") . "@upds.net.bo";
 
-        // Evitar duplicados de correo
         $contador = 1;
         while (Personal::where('CorreoElectronico', $emailGenerado)->exists()) {
             $emailGenerado = "sc.{$primerNombreSlug}.{$paternoSlug}" . ($inicialMaterno ? ".{$inicialMaterno}" : "") . str_pad($contador, 2, '0', STR_PAD_LEFT) . "@upds.net.bo";
             $contador++;
         }
 
-        // 4. GUARDADO DE PERSONAL
+        // 4. GUARDADO DE PERSONAL (CORREGIDO)
         $nuevoDocente = Personal::create([
             'NombreCompleto'    => $nombreLimpio,
             'ApellidoPaterno'   => $paternoLimpio,
             'ApellidoMaterno'   => $maternoLimpio,
             'CI'                => $request->CI,
+            'Genero'            => $request->Genero,
+            'Telefono'          => $request->Telefono,
             'CorreoElectronico' => $emailGenerado,
             'IdCargo'           => $request->IdCargo,
             'IdTipoContrato'    => $request->IdTipoContrato,
+            
+            // --- AGREGADOS QUE FALTABAN ---
+            'IdGradoAcademico'  => $request->IdGradoAcademico, // Guarda el grado actual en el perfil
+            'AniosExperiencia'  => $request->AniosExperiencia, // Guarda la experiencia
+            // ------------------------------
+
             'Activo'            => true
         ]);
 
-        // 5. VINCULAR CARRERA (Para Power BI / Acreditación)
+        // 5. VINCULAR CARRERA
         DB::table('CarreraPersonal')->insert([
             'IdCarrera'  => $request->IdCarrera,
             'IdPersonal' => $nuevoDocente->IdPersonal,
             'Gestion'    => 2026 
         ]);
 
-        // 6. REGISTRAR FORMACIÓN (Manejo de PDF)
+        // 6. REGISTRAR FORMACIÓN (Historial)
         $rutaPDF = null;
         if ($request->hasFile('ArchivoTitulo')) {
             $rutaPDF = $request->file('ArchivoTitulo')->store('titulos', 'public');
@@ -225,14 +239,14 @@ public function toggleStatus($id)
 
         Formacion::create([
             'IdPersonal'        => $nuevoDocente->IdPersonal,
-            'IdCentroFormacion' => 1, // Por defecto UPDS (puedes cambiarlo)
+            'IdCentroFormacion' => 1,
             'IdGradoAcademico'  => $request->IdGradoAcademico,
             'TituloObtenido'    => Str::upper($request->TituloObtenido),
             'AñoEstudios'       => $request->AñoEstudios,
             'RutaArchivo'       => $rutaPDF
         ]);
 
-        // 7. CREAR USUARIO LOGIN (Contraseña = CI)
+        // 7. CREAR USUARIO LOGIN
         User::create([
             'IdPersonal' => $nuevoDocente->IdPersonal,
             'Email'      => $emailGenerado,
@@ -242,12 +256,11 @@ public function toggleStatus($id)
 
         DB::commit();
 
-        // LIMPIEZA DE CACHÉ: Actualiza el Dashboard de inmediato
         Cache::forget('dashboard_stats_global');
         Cache::forget('dashboard_stats_user_' . Auth::id());
 
         return redirect()->route('personal.index')
-            ->with('success', "Personal registrado: $nombreLimpio. Correo: $emailGenerado. " . ($rutaPDF ? "" : "Póngase en contacto para el PDF."));
+            ->with('success', "Personal registrado: $nombreLimpio.");
 
     } catch (\Exception $e) {
         DB::rollBack();
@@ -257,37 +270,32 @@ public function toggleStatus($id)
     // =========================================================================
     // 3. DETALLE (PERFIL / KARDEX)
     // =========================================================================
- public function show($id)
+public function show($id)
 {
     /** @var \App\Models\User $user */
     $user = Auth::user();
 
-    // 1. SEGURIDAD: Reutilizamos el Gate cacheado para rapidez
+    // 1. SEGURIDAD: Reutilizamos el Gate cacheado
     if (!$user->canDo('ver_kardex_global') && $user->IdPersonal != $id) {
         abort(403, 'No tienes autorización para ver este perfil.');
     }
 
-    // 2. CONSULTA SELECTIVA (Eager Loading con columnas específicas)
-    // Esto evita traer datos binarios o de auditoría innecesarios de Azure.
+    // 2. CONSULTA SELECTIVA (Con Publicaciones + Tipo)
     $docente = Personal::with([
         'contrato:IdTipoContrato,NombreContrato', 
         'cargo:IdCargo,NombreCargo', 
         'materias:IdMateria,NombreMateria', 
         'formaciones.gradoAcademico:IdGradoAcademico,NombreGrado', 
         'formaciones.centroFormacion:IdCentroFormacion,NombreCentro',
-        'publicaciones'
+        
+        // AJUSTE AQUÍ: Ordenamos por fecha y traemos el "Tipo" (Libro, Artículo, etc.)
+        'publicaciones' => fn($q) => $q->orderBy('FechaPublicacion', 'desc'),
+        'publicaciones.tipo:IdTipoPublicacion,NombreTipo,Ambito' 
     ])->findOrFail($id);
 
-    // 3. CACHÉ DE CATÁLOGOS PARA MODALES
-    // Estos datos se usan en los modales de "Agregar Título" o "Editar Formación".
-    // Al cachearlos, los formularios de edición cargan instantáneamente.
-    $grados = Cache::remember('cat_grados_academicos', 86400, function() {
-        return GradoAcademico::all(['IdGradoAcademico', 'NombreGrado']);
-    });
-
-    $centros = Cache::remember('cat_centros_formacion', 86400, function() {
-        return CentroFormacion::all(['IdCentroFormacion', 'NombreCentro']);
-    });
+    // 3. CACHÉ DE CATÁLOGOS (Se mantiene igual)
+    $grados = Cache::remember('cat_grados_academicos', 86400, fn() => GradoAcademico::all(['IdGradoAcademico', 'NombreGrado']));
+    $centros = Cache::remember('cat_centros_formacion', 86400, fn() => CentroFormacion::all(['IdCentroFormacion', 'NombreCentro']));
 
     return view('personal.show', compact('docente', 'grados', 'centros'));
 }

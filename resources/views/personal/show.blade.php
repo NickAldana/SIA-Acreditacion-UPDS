@@ -151,13 +151,19 @@
                                 <i class="bi bi-calendar-week-fill me-2"></i> Carga Horaria
                             </button>
                         </li>
+                        {{-- NUEVA PESTAÑA: PRODUCCIÓN --}}
+                        <li class="nav-item">
+                            <button class="nav-link" id="produccion-tab" data-bs-toggle="tab" data-bs-target="#produccion" type="button">
+                                <i class="bi bi-journal-richtext me-2"></i> Producción Literaria
+                            </button>
+                        </li>
                     </ul>
                 </div>
 
                 <div class="card-body p-4 bg-gray-50">
                     <div class="tab-content" id="profileTabsContent">
                         
-                        {{-- TAB: FORMACIÓN --}}
+                        {{-- TAB 1: FORMACIÓN --}}
                         <div class="tab-pane fade show active" id="formacion">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="fw-bold text-dark mb-0">Grados Académicos Registrados</h6>
@@ -182,7 +188,6 @@
                                             <div class="text-end">
                                                 <div class="fw-bold text-dark fs-5">{{ $formacion->AñoEstudios }}</div>
                                                 
-                                                {{-- Lógica de Respaldo PDF con Data Attributes --}}
                                                 @if($formacion->RutaArchivo)
                                                     <a href="{{ asset('storage/' . $formacion->RutaArchivo) }}" target="_blank" class="btn btn-xs text-danger hover-bg-red-50 mt-1 fw-bold">
                                                         <i class="bi bi-file-pdf-fill me-1"></i> Ver PDF
@@ -207,13 +212,13 @@
                             </div>
                         </div>
 
-                        {{-- TAB: CARGA HORARIA --}}
+                        {{-- TAB 2: CARGA HORARIA --}}
                         <div class="tab-pane fade" id="carga">
                              <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="fw-bold text-dark mb-0">Historial de Materias</h6>
                                 @can('asignar_carga')
                                     <a href="{{ route('carga.create', ['docente_id' => $docente->IdPersonal]) }}" class="btn btn-sm btn-sia-ghost">
-                                        <i class="bi bi-arrow-right-circle-fill me-1"></i> Gestionar Carga
+                                        <i class="bi bi-arrow-right-circle-fill me-1"></i> Asignar Materia
                                     </a>
                                 @endcan
                             </div>
@@ -236,12 +241,68 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="3" class="text-center py-4 text-muted">Sin carga asignada.</td>
+                                                <td colspan="3" class="text-center py-4 text-muted">Sin materia asignada.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+
+                        {{-- TAB 3: PRODUCCIÓN (INTELECTUAL) --}}
+                        <div class="tab-pane fade" id="produccion">
+                            <h6 class="fw-bold text-upds-blue mb-4">Investigación y Publicaciones</h6>
+
+                            @forelse($docente->publicaciones as $pub)
+                                <div class="card border-0 shadow-sm mb-3 hover-lift transition-all bg-white">
+                                    <div class="card-body p-4">
+                                        <div class="d-flex align-items-start">
+                                            {{-- Icono Dinámico --}}
+                                            <div class="rounded-circle p-3 me-3 flex-shrink-0 
+                                                {{ Str::contains($pub->tipo->NombreTipo ?? '', 'Libro') ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-upds-blue' }}">
+                                                @if(Str::contains($pub->tipo->NombreTipo ?? '', 'Libro'))
+                                                    <i class="bi bi-book-half fs-4"></i>
+                                                @elseif(Str::contains($pub->tipo->NombreTipo ?? '', 'Artículo'))
+                                                    <i class="bi bi-newspaper fs-4"></i>
+                                                @else
+                                                    <i class="bi bi-journal-text fs-4"></i>
+                                                @endif
+                                            </div>
+
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <h6 class="fw-bold text-dark mb-1">{{ $pub->NombrePublicacion }}</h6>
+                                                        <div class="text-muted small mb-2">
+                                                            <span class="fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                                                                {{ $pub->tipo->NombreTipo ?? 'Publicación General' }}
+                                                            </span>
+                                                            <span class="mx-2">&bull;</span>
+                                                            <i class="bi bi-calendar-event me-1"></i> 
+                                                            {{ \Carbon\Carbon::parse($pub->FechaPublicacion)->isoFormat('LL') }}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    @if(isset($pub->tipo->Ambito))
+                                                        <span class="badge rounded-pill px-3 py-2 
+                                                            {{ $pub->tipo->Ambito == 'Internacional' ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-10 text-secondary' }}">
+                                                            {{ $pub->tipo->Ambito }}
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="text-center py-5">
+                                    <div class="bg-white rounded-circle d-inline-flex p-4 mb-3 text-muted shadow-sm">
+                                        <i class="bi bi-journal-x fs-1 opacity-50"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-secondary">Sin producción registrada</h6>
+                                    <p class="text-muted small">Este docente aún no ha registrado libros, artículos o investigaciones.</p>
+                                </div>
+                            @endforelse
                         </div>
 
                     </div>
@@ -304,7 +365,7 @@
     </div>
 </div>
 
-{{-- MODAL 2: SUBIDA RÁPIDA DE PDF (AJUSTADO) --}}
+{{-- MODAL 2: SUBIDA RÁPIDA DE PDF --}}
 <div class="modal fade" id="modalSubirPDF" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow-2xl rounded-4">
@@ -332,15 +393,10 @@
 {{-- SCRIPTS --}}
 <script>
     function abrirModalPDF(btn) {
-        // Extraemos los datos del botón usando Data Attributes
         const id = btn.getAttribute('data-id');
         const titulo = btn.getAttribute('data-titulo');
-
-        // Llenamos el formulario del modal
         document.getElementById('form_pdf_id').value = id;
         document.getElementById('form_pdf_titulo').innerText = "Cargando respaldo para: " + titulo;
-
-        // Disparamos el modal de Bootstrap
         var myModal = new bootstrap.Modal(document.getElementById('modalSubirPDF'));
         myModal.show();
     }

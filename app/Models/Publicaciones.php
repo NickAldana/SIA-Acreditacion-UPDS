@@ -29,4 +29,8 @@ class Publicaciones extends Model
     {
         return $this->belongsTo(Personal::class, 'IdPersonal', 'IdPersonal');
     }
+    public function tipo()
+{
+    return $this->belongsTo(TipoPublicacion::class, 'IdTipoPublicacion', 'IdTipoPublicacion');
+}
 }

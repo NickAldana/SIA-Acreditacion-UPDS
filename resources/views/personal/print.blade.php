@@ -212,7 +212,30 @@
             @else
                 <div class="text-muted text-center fst-italic">Sin vinculación específica.</div>
             @endif
-        </div>
+        </div>{{-- 5. PRODUCCIÓN INTELECTUAL (NUEVO) --}}
+        <div class="section-header">IV. Producción Intelectual e Investigación</div>
+        <table class="table-custom mb-3">
+            <thead>
+                <tr>
+                    <th style="width: 15%" class="text-center">Fecha</th>
+                    <th style="width: 20%">Tipo</th>
+                    <th style="width: 50%">Título de la Obra</th>
+                    <th style="width: 15%" class="text-center">Ámbito</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($docente->publicaciones as $pub)
+                <tr>
+                    <td class="text-center fw-bold">{{ \Carbon\Carbon::parse($pub->FechaPublicacion)->format('d/m/Y') }}</td>
+                    <td class="text-uppercase" style="font-size: 9px;">{{ $pub->tipo->NombreTipo ?? 'Genérico' }}</td>
+                    <td class="fst-italic">"{{ $pub->NombrePublicacion }}"</td>
+                    <td class="text-center text-muted">{{ $pub->tipo->Ambito ?? '-' }}</td>
+                </tr>
+                @empty
+                <tr><td colspan="4" class="text-center py-3 text-muted">- Sin producción registrada -</td></tr>
+                @endforelse
+            </tbody>
+        </table>
 
         {{-- PIE DE PÁGINA --}}
         <div class="row" style="margin-top: 80px;">
