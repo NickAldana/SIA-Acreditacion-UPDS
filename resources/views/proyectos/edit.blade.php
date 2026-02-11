@@ -1,14 +1,27 @@
 @extends('layouts.app')
 
+@section('title', 'Editar Expediente de Proyecto')
+
 @section('content')
 <div class="py-12 bg-slate-50 min-h-screen">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
-        {{-- Alertas --}}
+        {{-- Alertas de Sistema --}}
         @if(session('error'))
             <div class="mb-6 p-4 bg-rose-50 border-l-4 border-rose-500 text-rose-700 rounded-r-xl shadow-sm flex items-center animate-pulse">
                 <i class="fas fa-exclamation-circle mr-3 text-lg"></i>
                 <span class="text-sm font-bold uppercase tracking-wide">{{ session('error') }}</span>
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div class="mb-6 p-4 bg-rose-50 border-l-4 border-rose-500 text-rose-700 rounded-r-xl shadow-sm">
+                <p class="font-bold uppercase text-xs mb-2">Se encontraron errores:</p>
+                <ul class="list-disc list-inside text-xs">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
             </div>
         @endif
 
@@ -23,21 +36,23 @@
                         </div>
                         <div>
                             <h2 class="text-xl font-black tracking-widest uppercase">Expediente: {{ $proyecto->CodigoProyecto }}</h2>
-                            <p class="text-blue-200 text-[10px] font-bold uppercase tracking-widest">Gestión de Acreditación e Investigación</p>
+                            <p class="text-blue-200 text-[10px] font-bold uppercase tracking-widest">Edición y Control de Cambios</p>
                         </div>
                     </div>
                 </div>
-                <a href="{{ route('investigacion.index') }}" class="group flex items-center text-[10px] font-black bg-white/10 hover:bg-white text-white hover:text-[#003566] px-4 py-2.5 rounded-lg transition-all border border-white/20 uppercase tracking-widest">
+                <a href="{{ route('investigacion.index') }}" class="group flex items-center text-[10px] font-black bg-white/10 hover:bg-white text-white hover:text-[#003566] px-4 py-2.5 rounded-lg transition-all border border-white/20 uppercase tracking-widest text-decoration-none">
                     <i class="fas fa-arrow-left mr-2 transition-transform group-hover:-translate-x-1"></i>
-                    Volver al Listado
+                    Cancelar y Volver
                 </a>
             </div>
 
-            <form action="{{ route('investigacion.updateProyecto', $proyecto->ProyectoinvestigacionID) }}" method="POST" id="formProyecto" class="p-8 space-y-12">
+            {{-- FORMULARIO PRINCIPAL --}}
+            {{-- CORRECCIÓN CRÍTICA: Apunta a 'investigacion.update' --}}
+            <form action="{{ route('investigacion.update', $proyecto->ProyectoinvestigacionID) }}" method="POST" id="formProyecto" class="p-8 space-y-12">
                 @csrf
                 @method('PUT')
 
-                {{-- SECCIÓN 1: DATOS GENERALES (Diseño Grid Limpio) --}}
+                {{-- SECCIÓN 1: DATOS GENERALES --}}
                 <section>
                     <div class="flex items-center mb-6 pb-2 border-b border-slate-100">
                         <div class="bg-[#003566] text-white text-[10px] font-black px-2 py-1 rounded mr-3">01</div>
@@ -53,7 +68,7 @@
                                 placeholder="INGRESE EL NOMBRE DEL PROYECTO..." required minlength="10">
                         </div>
 
-                        {{-- Selectores (3 columnas) --}}
+                        {{-- Unidad Académica --}}
                         <div class="md:col-span-4">
                             <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Unidad Académica</label>
                             <div class="relative">
@@ -66,6 +81,7 @@
                             </div>
                         </div>
 
+                        {{-- Línea de Investigación --}}
                         <div class="md:col-span-4">
                             <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Línea de Investigación</label>
                             <select name="LineainvestigacionID" id="LineainvestigacionID" class="tom-select" required>
@@ -75,14 +91,15 @@
                             </select>
                         </div>
 
+                        {{-- Estado Actual --}}
                         <div class="md:col-span-4">
                             <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Estado Actual</label>
                             <div class="relative">
                                 <select name="Estado" id="Estado" class="w-full bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 rounded-lg p-3 focus:ring-2 focus:ring-[#003566]">
                                     <option value="En Ejecución" {{ $proyecto->Estado == 'En Ejecución' ? 'selected' : '' }}>🟢 VIGENTE (EN EJECUCIÓN)</option>
                                     <option value="Planificado" {{ $proyecto->Estado == 'Planificado' ? 'selected' : '' }}>🔵 PLANIFICADO</option>
-                                    <option value="Finalizado">⚫ FINALIZADO (CERRADO)</option>
-                                    <option value="Cancelado">🔴 CANCELADO</option>
+                                    <option value="Finalizado" {{ $proyecto->Estado == 'Finalizado' ? 'selected' : '' }}>⚫ FINALIZADO (CERRADO)</option>
+                                    <option value="Cancelado" {{ $proyecto->Estado == 'Cancelado' ? 'selected' : '' }}>🔴 CANCELADO</option>
                                 </select>
                             </div>
                         </div>
@@ -96,7 +113,7 @@
                     </div>
                 </section>
 
-                {{-- SECCIÓN 2: EQUIPO (LA JOYA DE LA CORONA) --}}
+                {{-- SECCIÓN 2: EQUIPO DE INVESTIGACIÓN --}}
                 <section>
                     <div class="flex items-center justify-between mb-6 pb-2 border-b border-slate-100">
                         <div class="flex items-center">
@@ -104,7 +121,7 @@
                             <h3 class="text-sm font-black text-slate-700 uppercase tracking-widest">Cuerpo de Investigadores</h3>
                         </div>
                         <button type="button" id="btn-add-member" 
-                            class="group flex items-center text-[10px] font-black uppercase tracking-widest text-[#003566] bg-blue-50 hover:bg-[#003566] hover:text-white px-4 py-2 rounded-lg transition-all border border-blue-100 shadow-sm">
+                            class="group flex items-center text-[10px] font-black uppercase tracking-widest text-[#003566] bg-blue-50 hover:bg-[#003566] hover:text-white px-4 py-2 rounded-lg transition-all border border-blue-100 shadow-sm border-0 cursor-pointer">
                             <i class="fas fa-user-plus mr-2 text-lg"></i>
                             Agregar Investigador
                         </button>
@@ -121,18 +138,13 @@
                                 </tr>
                             </thead>
                             <tbody id="tbody-equipo" class="divide-y divide-slate-100 bg-white">
+                                {{-- Loop de Miembros Existentes --}}
                                 @foreach($proyecto->equipo as $index => $miembro)
                                     @php 
                                         $estaRetirado = !is_null($miembro->pivot->FechaFin); 
                                     @endphp
 
-                                    {{-- 
-                                        TRUCO DE DISEÑO:
-                                        - Activos: Borde Azul a la izquierda.
-                                        - Retirados: Borde Gris Oscuro a la izquierda + Fondo sutil.
-                                    --}}
-                                    <tr class="transition-all group 
-                                        {{ $estaRetirado ? 'bg-slate-50 border-l-4 border-l-slate-400' : 'hover:bg-blue-50/30 border-l-4 border-l-[#003566]' }}">
+                                    <tr class="transition-all group {{ $estaRetirado ? 'bg-slate-50 border-l-4 border-l-slate-400' : 'hover:bg-blue-50/30 border-l-4 border-l-[#003566]' }}">
                                         
                                         {{-- 1. DATOS DEL INVESTIGADOR --}}
                                         <td class="px-6 py-4">
@@ -173,7 +185,7 @@
                                         {{-- 2. ROL --}}
                                         <td class="px-6 py-4">
                                             @if($estaRetirado)
-                                                {{-- MODO LECTURA ELEGANTE (Sin input visible, parece texto) --}}
+                                                {{-- MODO LECTURA --}}
                                                 <div class="text-xs font-bold text-slate-600 uppercase">
                                                     {{ $miembro->pivot->Rol }}
                                                 </div>
@@ -183,7 +195,7 @@
                                                     </div>
                                                 @endif
 
-                                                {{-- Inputs Ocultos para mantener los datos --}}
+                                                {{-- Inputs Ocultos --}}
                                                 @php 
                                                     $rolesMap = ['ENCARGADO DE PROYECTO' => 1, 'DOCENTE INVESTIGADOR' => 2, 'ESTUDIANTE INVESTIGADOR' => 3, 'PASANTE' => 4, 'REVISOR TÉCNICO' => 5, 'TUTOR / ASESOR' => 6];
                                                     $rolVal = $rolesMap[$miembro->pivot->Rol] ?? 3;
@@ -192,7 +204,7 @@
                                                 @if($miembro->pivot->EsResponsable) <input type="hidden" name="es_responsable[{{ $index }}]" value="1"> @endif
 
                                             @else
-                                                {{-- MODO EDICIÓN (Selects bonitos) --}}
+                                                {{-- MODO EDICIÓN --}}
                                                 <select name="roles_proy[]" class="w-full bg-white border border-slate-200 text-[10px] font-bold uppercase rounded p-2 focus:ring-1 focus:ring-[#003566] mb-2">
                                                     @php $rolesMap = ['ENCARGADO DE PROYECTO' => 1, 'DOCENTE INVESTIGADOR' => 2, 'ESTUDIANTE INVESTIGADOR' => 3, 'PASANTE' => 4, 'REVISOR TÉCNICO' => 5, 'TUTOR / ASESOR' => 6]; 
                                                          $rolActual = array_search($miembro->pivot->Rol, array_keys($rolesMap)) !== false ? $rolesMap[$miembro->pivot->Rol] : 3;
@@ -208,12 +220,11 @@
                                             @endif
                                         </td>
 
-                                        {{-- 3. FECHAS (El punto clave) --}}
+                                        {{-- 3. FECHAS --}}
                                         <td class="px-6 py-4">
                                             <div class="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label class="block text-[8px] font-black text-slate-400 uppercase mb-1">Alta</label>
-                                                    {{-- Fecha Alta siempre readonly, es un hecho histórico --}}
                                                     <div class="text-xs font-bold text-slate-600 font-mono bg-slate-50 px-2 py-1 rounded border border-slate-100">
                                                         {{ \Carbon\Carbon::parse($miembro->pivot->FechaInicio)->format('d/m/Y') }}
                                                     </div>
@@ -223,15 +234,12 @@
                                                 <div>
                                                     <label class="block text-[8px] font-black text-slate-400 uppercase mb-1">Baja / Retiro</label>
                                                     @if($estaRetirado)
-                                                        {{-- SI ESTÁ RETIRADO: Mostramos la fecha fija (Estilo Etiqueta) --}}
                                                         <div class="text-xs font-bold text-slate-500 font-mono bg-slate-200 px-2 py-1 rounded border border-slate-300 flex items-center justify-between">
                                                             {{ \Carbon\Carbon::parse($miembro->pivot->FechaFin)->format('d/m/Y') }}
                                                             <i class="fas fa-lock text-[10px] text-slate-400"></i>
                                                         </div>
-                                                        {{-- Enviamos la fecha oculta --}}
                                                         <input type="date" name="fechas_fin[]" value="{{ \Carbon\Carbon::parse($miembro->pivot->FechaFin)->format('Y-m-d') }}" readonly class="hidden">
                                                     @else
-                                                        {{-- SI ESTÁ ACTIVO: Input limpio para dar de baja --}}
                                                         <input type="date" name="fechas_fin[]" 
                                                             class="fecha-fin-input w-full bg-white border border-slate-200 text-[10px] font-bold text-slate-600 rounded p-1 focus:ring-1 focus:ring-rose-500 focus:border-rose-500 shadow-sm"
                                                             min="{{ \Carbon\Carbon::parse($miembro->pivot->FechaInicio)->format('Y-m-d') }}"
@@ -262,7 +270,7 @@
 
                 {{-- Footer de Acciones --}}
                 <div class="flex items-center justify-end pt-6 border-t border-slate-100">
-                    <button type="submit" class="group relative px-8 py-3 bg-[#003566] text-white text-xs font-black uppercase tracking-widest rounded-lg shadow-lg hover:bg-slate-900 transition-all hover:-translate-y-0.5">
+                    <button type="submit" class="group relative px-8 py-3 bg-[#003566] text-white text-xs font-black uppercase tracking-widest rounded-lg shadow-lg hover:bg-slate-900 transition-all hover:-translate-y-0.5 border-0 cursor-pointer">
                         <span class="flex items-center">
                             <i class="fas fa-save mr-2 text-[#FFC300]"></i>
                             Guardar Cambios del Expediente
@@ -300,24 +308,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Agregar Fila Nueva (DISEÑO ÁMBAR PARA DIFERENCIAR)
-    // Función para AGREGAR filas nuevas (FLEXIBLE)
+    // Agregar Fila Nueva
     function addRow() {
         const row = document.createElement('tr');
-        // Usamos borde amarillo para indicar que es nuevo/pendiente
         row.className = "bg-yellow-50/30 hover:bg-yellow-50 transition-colors group animate-fade-in border-l-4 border-yellow-400"; 
         
-        // 1. Fecha de HOY (Lo más probable)
+        // Sugerir fecha: Si el proyecto empieza en el futuro, sugerir esa fecha. Si ya empezó, sugerir hoy.
         const hoy = new Date().toISOString().split('T')[0];
-        
-        // 2. Fecha Inicio Proyecto (Solo como referencia, NO como bloqueo)
         const inicioProyecto = inputFechaInicio.value;
-
-        /* CAMBIO DE LÓGICA:
-           - Por defecto sugerimos HOY.
-           - PERO si HOY es antes del inicio del proyecto (ej: estamos planificando),
-             sugerimos la fecha de inicio del proyecto para no equivocarnos.
-        */
         let fechaSugerida = hoy;
         if (inicioProyecto && hoy < inicioProyecto) {
             fechaSugerida = inicioProyecto;
@@ -349,13 +347,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </td>
             <td class="px-6 py-5">
-                {{-- AQUÍ ESTÁ EL CAMBIO: Quitamos el 'min' para dar libertad administrativa --}}
                 <div class="relative">
                     <input type="date" name="fechas_inc[]" 
                         class="w-full rounded-lg border-slate-200 text-[11px] font-black py-1.5 bg-white focus:ring-1 focus:ring-yellow-400" 
                         value="${fechaSugerida}">
-                    
-                    {{-- Si hay fecha de proyecto, mostramos una advertencia visual sutil si se van muy atrás --}}
                     ${inicioProyecto ? `<div class="text-[8px] text-slate-400 mt-1 italic">Proyecto inicia: ${inicioProyecto.split('-').reverse().join('/')}</div>` : ''}
                 </div>
             </td>
@@ -364,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="hidden" name="fechas_fin[]" value=""> 
             </td>
             <td class="px-6 py-5 text-center">
-                <button type="button" class="btn-remove text-rose-400 hover:text-rose-600 transition-colors p-2 rounded-full hover:bg-rose-50" title="Cancelar">
+                <button type="button" class="btn-remove text-rose-400 hover:text-rose-600 transition-colors p-2 rounded-full hover:bg-rose-50 border-0 cursor-pointer bg-transparent" title="Cancelar">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </td>
@@ -376,38 +371,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
     btnAdd.addEventListener('click', (e) => { e.preventDefault(); addRow(); });
 
+    // Reasignar índices a checkboxes para que Laravel los lea correctamente
     function reindexCheckboxes() {
-        document.querySelectorAll('.jefe-checkbox').forEach((cb, i) => cb.setAttribute('name', `es_responsable[${i}]`));
+        // Obtenemos índice máximo existente en el blade
+        let startIndex = {{ count($proyecto->equipo) }};
+        
+        // A los nuevos checkboxes (que no tienen name todavía o son dinámicos) les asignamos indices siguientes
+        document.querySelectorAll('.jefe-checkbox').forEach((cb, i) => {
+            if(!cb.getAttribute('name')) {
+                cb.setAttribute('name', `es_responsable[${startIndex + i}]`);
+            }
+        });
     }
 
     tbody.addEventListener('click', e => {
         const btn = e.target.closest('.btn-remove');
         if(btn) {
-            // Confirmación suave solo para estar seguros
             if(confirm('¿Descartar este ingreso nuevo?')) {
                 btn.closest('tr').remove();
-                reindexCheckboxes();
             }
         }
     });
 
-    // Gestión automática de colores al poner fecha de baja en registros activos
+    // Gestión visual al dar de baja
     document.querySelectorAll('.fecha-fin-input').forEach(input => {
         input.addEventListener('change', function() {
             const row = this.closest('tr');
             if(this.value) {
-                // Si ponen fecha -> Se pone Amarillo suave para indicar "Cambio pendiente"
                 row.classList.remove('border-l-[#003566]');
                 row.classList.add('bg-amber-50', 'border-l-amber-400');
             } else {
-                // Si la quitan -> Vuelve a ser Azul (Activo)
                 row.classList.remove('bg-amber-50', 'border-l-amber-400');
                 row.classList.add('border-l-[#003566]');
             }
         });
     });
-
-    reindexCheckboxes();
 });
 </script>
 @endsection

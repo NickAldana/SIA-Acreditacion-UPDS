@@ -47,17 +47,20 @@
         {{-- Barra de Herramientas --}}
         <div class="bg-white border-x border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-md mb-4">
             <div class="flex gap-4">
+                {{-- Ruta Externa a Publicaciones (Correcta) --}}
                 <a href="{{ route('publicaciones.index') }}" class="flex items-center px-4 py-2 text-[#003566] border border-[#003566] rounded hover:bg-blue-50 transition text-[10px] font-black uppercase tracking-widest no-underline">
                     <i class="fas fa-book mr-2"></i> Repositorio de Publicaciones
                 </a>
             </div>
             
             <div class="flex items-center gap-3">
+                {{-- CORREGIDO: De 'proyecto.pdf_proyectos' a 'investigacion.pdf_proyectos' --}}
                 <a href="{{ route('investigacion.pdf_proyectos', request()->all()) }}" class="flex items-center px-5 py-2.5 bg-[#d31c38] text-white rounded shadow-lg hover:bg-[#b0162c] transition text-[10px] font-black uppercase tracking-widest no-underline">
                     <i class="fas fa-file-pdf mr-2"></i> Exportar PDF
                 </a>
                 
-                <a href="{{ route('investigacion.createProyecto') }}" class="flex items-center px-6 py-2.5 bg-[#FFC300] text-[#003566] rounded shadow-lg hover:bg-[#e6b000] transition text-[10px] font-black uppercase tracking-widest no-underline">
+                {{-- CORREGIDO: De 'proyecto.createProyecto' a 'investigacion.create' --}}
+                <a href="{{ route('investigacion.create') }}" class="flex items-center px-6 py-2.5 bg-[#FFC300] text-[#003566] rounded shadow-lg hover:bg-[#e6b000] transition text-[10px] font-black uppercase tracking-widest no-underline">
                     <i class="fas fa-plus-circle mr-2"></i> Nuevo Proyecto
                 </a>
             </div>
@@ -65,6 +68,7 @@
 
         {{-- Panel de Filtros Avanzados --}}
         <div class="bg-white p-8 border border-slate-200 shadow-sm rounded-lg mb-6">
+            {{-- CORREGIDO: De 'proyecto.index' a 'investigacion.index' --}}
             <form action="{{ route('investigacion.index') }}" method="GET" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
                     <div class="md:col-span-4">
@@ -116,6 +120,7 @@
                         @endforeach
                     </div>
                     <div class="ml-auto">
+                        {{-- CORREGIDO: De 'proyecto.index' a 'investigacion.index' --}}
                         <a href="{{ route('investigacion.index') }}" class="text-[10px] font-black text-rose-600 hover:text-rose-700 uppercase tracking-widest border-b-2 border-rose-100 transition-all no-underline">
                             <i class="fas fa-undo mr-1"></i> Limpiar Filtros
                         </a>
@@ -187,7 +192,8 @@
 
                             <td class="px-6 py-6 text-center">
                                 <div class="flex flex-col gap-2">
-                                    <a href="{{ route('investigacion.showProyecto', $proyecto->ProyectoinvestigacionID) }}" 
+                                    {{-- CORREGIDO: De 'proyecto.show' a 'investigacion.show' --}}
+                                    <a href="{{ route('investigacion.show', $proyecto->ProyectoinvestigacionID) }}" 
                                        class="w-full flex justify-center items-center gap-2 px-3 py-2 bg-slate-800 text-white rounded text-[9px] font-black uppercase tracking-widest hover:bg-black transition no-underline">
                                         <i class="fas fa-eye"></i> Ver Ficha
                                     </a>
@@ -197,7 +203,8 @@
                                             <i class="fas fa-lock mr-1.5"></i> Historial
                                         </span>
                                     @else
-                                        <a href="{{ route('investigacion.editProyecto', $proyecto->ProyectoinvestigacionID) }}" 
+                                        {{-- CORREGIDO: De 'investigacion.editProyecto' a 'investigacion.edit' --}}
+                                        <a href="{{ route('investigacion.edit', $proyecto->ProyectoinvestigacionID) }}" 
                                            class="w-full flex justify-center items-center gap-2 px-3 py-2 bg-amber-400 text-amber-900 rounded text-[9px] font-black uppercase tracking-widest hover:bg-[#FFC300] transition no-underline shadow-sm">
                                             <i class="fas fa-edit"></i> Editar
                                         </a>

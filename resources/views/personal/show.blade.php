@@ -3,7 +3,7 @@
 @section('content')
 <div class="container-fluid py-4">
 
-    {{-- ENCABEZADO INSTITUCIONAL --}}
+    {{-- 1. ENCABEZADO INSTITUCIONAL (Limpio, solo navegación y reporte) --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 px-2">
         <div class="mb-3 mb-md-0">
             <nav aria-label="breadcrumb" class="mb-1">
@@ -18,21 +18,19 @@
         </div>
         
         <div class="d-flex gap-2">
-            @can('gestionar_personal')
-                <a href="{{ route('personal.index') }}" class="btn btn-white border rounded-pill px-4 fw-bold text-xs shadow-sm transition-all">
-                    <i class="bi bi-arrow-left me-2"></i> VOLVER AL LISTADO
-                </a>
-            @endcan
+            <a href="{{ route('personal.index') }}" class="btn btn-white border rounded-pill px-4 fw-bold text-xs shadow-sm hover-scale">
+                <i class="bi bi-arrow-left me-2"></i> VOLVER
+            </a>
             
-            <a href="{{ route('personal.print', $docente->PersonalID) }}" target="_blank" class="btn btn-sia-primary shadow-sm rounded-pill px-4 fw-bold text-xs">
-                <i class="bi bi-printer-fill me-2"></i> GENERAR KARDEX
+            <a href="{{ route('personal.print', $docente->PersonalID) }}" target="_blank" class="btn btn-sia-primary shadow-sm rounded-pill px-4 fw-bold text-xs hover-scale">
+                <i class="bi bi-printer-fill me-2"></i> IMPRIMIR KARDEX
             </a>
         </div>
     </div>
 
     <div class="row g-4">
         
-        {{-- COLUMNA IZQUIERDA: TARJETA DE IDENTIDAD --}}
+        {{-- 2. COLUMNA IZQUIERDA: TARJETA DE IDENTIDAD --}}
         <div class="col-lg-4 col-xl-3">
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
                 <div class="card-body p-0">
@@ -105,10 +103,10 @@
             </div>
         </div>
 
-        {{-- COLUMNA DERECHA: INFORMACIÓN DETALLADA --}}
+        {{-- 3. COLUMNA DERECHA: PESTAÑAS Y CONTENIDO DETALLADO --}}
         <div class="col-lg-8 col-xl-9">
             
-            {{-- Trayectoria Laboral --}}
+            {{-- Resumen Laboral --}}
             <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                 <div class="card-body p-4">
                     <div class="row g-4">
@@ -145,12 +143,17 @@
                         </li>
                         <li class="nav-item">
                             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-carga" type="button">
-                                <i class="bi bi-calendar3 me-2"></i> CARGA HORARIA 2026
+                                <i class="bi bi-calendar3 me-2"></i> CARGA {{ date('Y') }}
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-proyectos" type="button">
+                                <i class="bi bi-rocket-takeoff me-2"></i> PROYECTOS
                             </button>
                         </li>
                         <li class="nav-item">
                             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-produccion" type="button">
-                                <i class="bi bi-journal-check me-2"></i> PRODUCCIÓN CIENTÍFICA
+                                <i class="bi bi-journal-check me-2"></i> PUBLICACIONES
                             </button>
                         </li>
                     </ul>
@@ -159,93 +162,212 @@
                 <div class="card-body p-4 bg-gray-50">
                     <div class="tab-content">
                         
-                        {{-- TAB 1: FORMACIÓN ACADÉMICA --}}
+                        {{-- ========================================================= --}}
+                        {{-- TAB 1: FORMACIÓN ACADÉMICA (Botón "Subir PDF" en la fila) --}}
+                        {{-- ========================================================= --}}
                         <div class="tab-pane fade show active" id="tab-formacion">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h6 class="fw-bold text-upds-blue mb-0">Títulos y Postgrados Certificados</h6>
-                                @if(Auth::user()->canDo('gestionar_personal') || Auth::id() == $docente->PersonalID)
-                                    <button class="btn btn-outline-upds btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalFormacion">
-                                        <i class="bi bi-plus-lg me-1"></i> ADJUNTAR TÍTULO
-                                    </button>
-                                @endif
+                                <h6 class="fw-bold text-upds-blue mb-0">Títulos y Postgrados</h6>
+                                {{-- Botón para agregar NUEVO registro, no para subir pdf a uno existente --}}
+         <button class="btn btn-outline-upds btn-sm rounded-pill px-3 shadow-sm transition-all" data-bs-toggle="modal" data-bs-target="#modalCrearFormacion">
+    <i class="bi bi-plus-lg me-1"></i> NUEVO TÍTULO
+</button>
                             </div>
                             
                             <div class="table-responsive">
-                                <table class="table table-sm align-middle bg-white rounded-3 shadow-sm">
-                                    <thead class="bg-gray-100">
+                                <table class="table table-hover align-middle bg-white rounded-3 shadow-sm border-light">
+                                    <thead class="bg-light">
                                         <tr class="text-xxs text-muted fw-bold text-uppercase">
                                             <th class="ps-3 py-2">Grado</th>
                                             <th>Título Obtenido</th>
                                             <th>Institución</th>
-                                            <th class="text-end pe-3">Evidencia</th>
+                                            <th class="text-end pe-4">Respaldo Digital</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($docente->formaciones as $f)
+    @forelse($docente->formaciones as $f)
+        <tr>
+            {{-- 1. Grado (Nivel) --}}
+            <td class="ps-3 align-middle">
+                <span class="badge bg-blue-soft text-upds-blue border border-blue-100">
+                    {{ $f->grado->Nombregrado ?? 'GRADO' }}
+                </span>
+            </td>
+
+            {{-- 2. Título y Profesión (Aquí estaba el fallo visual) --}}
+            <td class="align-middle">
+                {{-- Nombre de la Profesión (Lo que faltaba) --}}
+                <div class="fw-bold text-dark text-uppercase mb-1">
+                    {{ $f->NombreProfesion }}
+                </div>
+                {{-- Título Obtenido (Ej: Licenciatura) --}}
+                <div class="text-xs text-muted fw-bold">
+                    <i class="bi bi-award me-1"></i> {{ $f->Tituloobtenido }}
+                </div>
+            </td>
+
+            {{-- 3. Institución --}}
+            <td class="align-middle text-muted small">
+                {{ $f->centro->Nombrecentro ?? 'Institución Externa' }}
+            </td>
+
+            {{-- 4. Botones de Acción (Subir/Ver) --}}
+            <td class="text-end pe-3 align-middle">
+                @if($f->RutaArchivo)
+                    <div class="d-flex justify-content-end gap-2">
+                        {{-- Ver PDF --}}
+                        <a href="{{ asset('storage/' . $f->RutaArchivo) }}" target="_blank" class="btn btn-sm btn-ghost-primary fw-bold text-xs" title="Ver Documento">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> VER
+                        </a>
+                        {{-- Reemplazar (Opcional) --}}
+                        <button class="btn btn-sm btn-ghost-warning" onclick="abrirModalPDF('{{ $f->FormacionID }}', '{{ $f->NombreProfesion }}')" title="Actualizar Archivo">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </button>
+                    </div>
+                @else
+                    {{-- Botón de Subida Contextual --}}
+                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold text-xs" 
+                            onclick="abrirModalPDF('{{ $f->FormacionID }}', '{{ $f->NombreProfesion }}')">
+                        <i class="bi bi-cloud-upload-fill me-1"></i> SUBIR RESPALDO
+                    </button>
+                @endif
+            </td>
+        </tr>
+    @empty
+        <tr>
+            <td colspan="4" class="text-center py-5">
+                <i class="bi bi-mortarboard display-6 text-muted opacity-25"></i>
+                <p class="text-muted small mt-2">No se encontraron registros de formación académica.</p>
+            </td>
+        </tr>
+    @endforelse
+</tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {{-- ========================================================= --}}
+                        {{-- TAB 2: CARGA HORARIA (Botón "Subir Informe" en la fila)   --}}
+                        {{-- ========================================================= --}}
+                        <div class="tab-pane fade" id="tab-carga">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h6 class="fw-bold text-upds-blue mb-0">Docencia Gestión {{ date('Y') }}</h6>
+                                <a href="{{ route('carga.create', ['docente_id' => $docente->PersonalID]) }}" class="btn btn-sia-primary btn-sm rounded-pill px-3 shadow-sm">
+                                    <i class="bi bi-calendar-plus me-1"></i> ASIGNAR MATERIA
+                                </a>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle bg-white rounded-3 shadow-sm">
+                                    <thead class="bg-light">
+                                        <tr class="text-xxs text-muted fw-bold text-uppercase">
+                                            <th class="ps-3">Materia</th>
+                                            <th class="text-center">Grupo</th>
+                                            <th class="text-center">Modalidad</th>
+                                            <th class="text-end pe-4">Informe / Autoevaluación</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($docente->materias as $m)
                                             <tr>
-                                                <td class="ps-3"><span class="badge bg-blue-soft text-upds-blue">{{ $f->grado->Nombregrado }}</span></td>
-                                                <td class="small fw-bold text-dark text-uppercase">{{ $f->Tituloobtenido }}</td>
-                                                <td class="small text-muted">{{ $f->centro->Nombrecentro }}</td>
+                                                <td class="ps-3">
+                                                    <div class="fw-bold text-dark">{{ $m->Nombremateria }}</div>
+                                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                                        @foreach($m->carreras->take(2) as $carrera)
+                                                            <span class="badge bg-gray-100 text-muted border text-xxs">{{ Str::limit($carrera->Nombrecarrera, 20) }}</span>
+                                                        @endforeach
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="fw-black text-upds-blue fs-5">{{ $m->carga->Grupo }}</span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge {{ $m->carga->Modalidad == 'Virtual' ? 'bg-purple-soft text-purple' : 'bg-green-soft text-green' }}">
+                                                        {{ $m->carga->Modalidad }}
+                                                    </span>
+                                                </td>
                                                 <td class="text-end pe-3">
-                                                    @if($f->RutaArchivo)
-                                                        <a href="{{ asset('storage/' . $f->RutaArchivo) }}" target="_blank" class="text-primary fs-5"><i class="bi bi-file-earmark-pdf-fill"></i></a>
+                                                    {{-- LOGICA CONTEXTUAL --}}
+                                                    @if($m->carga->RutaAutoevaluacion)
+                                                        {{-- Si ya subió informe --}}
+                                                        <a href="{{ asset('storage/'.$m->carga->RutaAutoevaluacion) }}" target="_blank" class="btn btn-sm btn-ghost-success fw-bold text-xs">
+                                                            <i class="bi bi-check-circle-fill me-1"></i> INFORME OK
+                                                        </a>
                                                     @else
-                                                        <button class="btn btn-link text-warning p-0 text-xxs fw-bold shadow-none" 
-                                                                data-id="{{ $f->FormacionID }}" 
-                                                                data-titulo="{{ $f->Tituloobtenido }}"
-                                                                onclick="abrirModalPDF(this.getAttribute('data-id'), this.getAttribute('data-titulo'))">
-                                                            SUBIR PDF
+                                                        {{-- Si falta informe --}}
+                                                        <button class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-bold text-xs"
+                                                                onclick="abrirModalAutoeval('{{ $m->carga->PersonalmateriaID }}', '{{ $m->Nombremateria }}')">
+                                                            <i class="bi bi-upload me-1"></i> SUBIR INFORME
                                                         </button>
                                                     @endif
                                                 </td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="4" class="text-center py-5 text-muted small">Sin registros de formación académica.</td></tr>
+                                            <tr>
+                                                <td colspan="4" class="text-center py-5 text-muted small">
+                                                    <i class="bi bi-calendar-x display-4 opacity-50"></i>
+                                                    <p class="mt-2 mb-0">No tiene carga asignada.</p>
+                                                </td>
+                                            </tr>
                                         @endforelse
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
-                        {{-- TAB 2: CARGA HORARIA --}}
-                        <div class="tab-pane fade" id="tab-carga">
-                            <h6 class="fw-bold text-upds-blue mb-4">Docencia - Planificación Gestión 2026</h6>
+                        {{-- ========================================================= --}}
+                        {{-- TAB 3: PROYECTOS (Separado de Publicaciones)              --}}
+                        {{-- ========================================================= --}}
+                        <div class="tab-pane fade" id="tab-proyectos">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h6 class="fw-bold text-upds-blue mb-0">Proyectos de Investigación</h6>
+                                <button class="btn btn-outline-upds btn-sm rounded-pill px-3" onclick="alert('Modal Crear Proyecto')">
+                                    <i class="bi bi-lightbulb me-1"></i> NUEVO PROYECTO
+                                </button>
+                            </div>
+
                             <div class="row g-3">
-                                @forelse($docente->materias as $m)
+                                @forelse($docente->proyectos as $proyecto)
                                     <div class="col-md-6">
-                                        <div class="p-3 border-0 shadow-sm rounded-3 bg-white d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <div class="text-xxs fw-bold text-upds-blue mb-1">{{ $m->Sigla }}</div>
-                                                <div class="small fw-bold text-dark text-uppercase">{{ $m->Nombremateria }}</div>
-                                                <div class="text-xxs text-muted fw-bold text-uppercase">{{ $m->carrera->Nombrecarrera }}</div>
+                                        <div class="p-3 border rounded-3 bg-white shadow-sm h-100 position-relative">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="badge bg-primary text-white text-xxs">{{ $proyecto->CodigoProyecto ?? 'INV' }}</span>
+                                                <small class="text-muted fw-bold text-xxs">
+                                                    {{ $proyecto->pivot->FechaInicio ? date('d/m/Y', strtotime($proyecto->pivot->FechaInicio)) : 'N/A' }}
+                                                </small>
                                             </div>
-                                            <div class="text-end">
-                                                <span class="badge bg-gray-100 text-dark border shadow-none px-3">P-{{ $m->carga->Periodo }}</span>
-                                                @if($m->carga->RutaAutoevaluacion)
-                                                    <a href="{{ asset('storage/'.$m->carga->RutaAutoevaluacion) }}" target="_blank" class="d-block mt-1 text-success small" title="Ver Autoevaluación">
-                                                        <i class="bi bi-check-circle-fill"></i>
-                                                    </a>
+                                            <h6 class="fw-bold text-dark mb-2 line-clamp-2" style="font-size: 0.9rem;">
+                                                {{ $proyecto->Nombreproyecto }}
+                                            </h6>
+                                            <div class="d-flex align-items-center gap-2 mt-3">
+                                                <span class="badge bg-light text-dark border">{{ $proyecto->pivot->Rol }}</span>
+                                                @if($proyecto->pivot->EsResponsable)
+                                                    <span class="badge bg-warning text-dark"><i class="bi bi-star-fill"></i> Líder</span>
                                                 @endif
+                                            </div>
+                                            {{-- Botón Contextual de Proyecto --}}
+                                            <div class="mt-3 pt-3 border-top d-flex justify-content-end">
+                                                <button class="btn btn-sm btn-link text-decoration-none p-0 text-xs fw-bold text-primary">
+                                                    <i class="bi bi-folder2-open me-1"></i> GESTIONAR AVANCES
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
                                 @empty
-                                    <div class="col-12 text-center py-5 text-muted small">No tiene carga horaria asignada actualmente.</div>
+                                    <div class="col-12 text-center py-5 text-muted small">No participa en proyectos actualmente.</div>
                                 @endforelse
                             </div>
                         </div>
 
-                        {{-- TAB 3: PRODUCCIÓN CIENTÍFICA (MEJORADA) --}}
+                        {{-- ========================================================= --}}
+                        {{-- TAB 4: PUBLICACIONES (Producción Intelectual)             --}}
+                        {{-- ========================================================= --}}
                         <div class="tab-pane fade" id="tab-produccion">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h6 class="fw-bold text-upds-blue mb-0">Investigación y Publicaciones Académicas</h6>
-                                
-                                {{-- BOTÓN PARA REGISTRO RÁPIDO (Se muestra si se tiene permiso) --}}
-                                @can('gestionar_personal')
-                                    <button class="btn btn-sia-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalFastPub">
-                                        <i class="bi bi-plus-lg me-1"></i> REGISTRAR OBRA
-                                    </button>
-                                @endcan
+                                <h6 class="fw-bold text-upds-blue mb-0">Producción Intelectual</h6>
+                                <button class="btn btn-sia-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalFastPub">
+                                    <i class="bi bi-plus-lg me-1"></i> REGISTRAR OBRA
+                                </button>
                             </div>
 
                             <div class="table-responsive">
@@ -287,155 +409,229 @@
     </div>
 </div>
 
-{{-- MODAL 1: ADJUNTAR RESPALDO PDF (Formación) --}}
+{{-- ========================================================= --}}
+{{-- MODALES (Ventanas Emergentes)                             --}}
+{{-- ========================================================= --}}
+
+{{-- 1. MODAL SUBIR PDF (FORMACIÓN) --}}
 <div class="modal fade" id="modalSubirPDF" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header bg-light border-0 px-4 py-3">
-                <h6 class="modal-title fw-bold text-upds-blue small uppercase">Adjuntar Respaldo PDF</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-upds-blue text-white px-4">
+                <h6 class="modal-title fw-bold small text-uppercase">Respaldo Digital: Formación</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ route('formacion.updatePDF') }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                <input type="hidden" name="FormacionID" id="form_pdf_id">
-                <div class="modal-body p-4 text-center">
-                    <p class="text-xxs text-muted fw-black mb-3 text-uppercase" id="form_pdf_titulo"></p>
+                <input type="hidden" name="FormacionID" id="input_formacion_id">
+                <div class="modal-body p-4 bg-white text-center">
+                    <p class="text-muted small mb-1">Adjuntar archivo PDF para:</p>
+                    <h6 class="fw-bold text-upds-blue mb-3 text-uppercase" id="label_formacion_titulo">...</h6>
+                    
                     <div class="p-3 bg-gray-50 border border-dashed rounded-3">
-                        <input type="file" name="RutaArchivo" class="form-control form-control-sm border-0 bg-transparent shadow-none" accept=".pdf" required>
+                        <input type="file" name="archivo" class="form-control form-control-sm" accept=".pdf" required>
                     </div>
                 </div>
-                <div class="modal-footer border-0 p-3">
-                    <button type="submit" class="btn btn-sia-primary w-100 fw-bold">SUBIR Y ACTUALIZAR</button>
+                <div class="modal-footer border-0 p-3 bg-gray-50">
+                    <button type="button" class="btn btn-light rounded-pill px-4 btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sia-primary rounded-pill px-4 btn-sm">Guardar PDF</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- MODAL 2: REGISTRO RÁPIDO DE PUBLICACIÓN (Fast Track) --}}
+{{-- 2. MODAL SUBIR INFORME (CARGA ACADÉMICA) --}}
+<div class="modal fade" id="modalSubirAutoeval" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-warning text-dark px-4">
+                <h6 class="modal-title fw-bold small text-uppercase">Informe Final de Materia</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            {{-- NOTA: Asegúrate de crear esta ruta o usar una genérica --}}
+            <form action="#" method="POST" enctype="multipart/form-data"> 
+                @csrf
+                <input type="hidden" name="PersonalmateriaID" id="input_pm_id">
+                <div class="modal-body p-4 bg-white text-center">
+                    <p class="text-muted small mb-1">Materia:</p>
+                    <h6 class="fw-bold text-dark mb-3 text-uppercase" id="label_materia_nombre">...</h6>
+                    
+                    <div class="p-3 bg-warning bg-opacity-10 border border-warning border-dashed rounded-3">
+                        <label class="text-xxs fw-bold text-muted text-uppercase mb-2 d-block">Seleccione el Informe (PDF)</label>
+                        <input type="file" name="informe" class="form-control form-control-sm" accept=".pdf" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-3 bg-gray-50">
+                    <button type="button" class="btn btn-light rounded-pill px-4 btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning rounded-pill px-4 btn-sm fw-bold">Subir Informe</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- 3. MODAL REGISTRO PUBLICACIÓN (FAST TRACK) --}}
 <div class="modal fade" id="modalFastPub" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="modal-header bg-upds-blue text-white px-4">
-                <h6 class="modal-title fw-bold small text-uppercase">
-                    <i class="bi bi-journal-plus me-2"></i> Nueva Publicación para: {{ $docente->getNombreCortoAttribute() }}
-                </h6>
+                <h6 class="modal-title fw-bold small text-uppercase">Nueva Publicación</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            
             <form action="{{ route('publicaciones.store') }}" method="POST">
                 @csrf
                 <div class="modal-body p-4 bg-gray-50">
-                    
-                    {{-- 1. DETALLES DE LA OBRA --}}
+                    {{-- Campos de Publicación (Simplificado) --}}
                     <div class="row g-3 mb-3">
                         <div class="col-12">
                             <label class="text-xxs fw-bold text-muted text-uppercase">Título de la Obra</label>
-                            <input type="text" name="Nombrepublicacion" class="form-control fw-bold border-0 bg-white shadow-sm" placeholder="Ej: INTELIGENCIA ARTIFICIAL EN LA EDUCACIÓN" required>
+                            <input type="text" name="Nombrepublicacion" class="form-control fw-bold border-0 bg-white shadow-sm" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="text-xxs fw-bold text-muted text-uppercase">Tipo</label>
-                            <select name="TipopublicacionID" class="form-select border-0 bg-white shadow-sm small" required>
-                                @foreach($tiposPub ?? [] as $t)
-                                    <option value="{{ $t->TipopublicacionID }}">{{ $t->Nombretipo }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-xxs fw-bold text-muted text-uppercase">Medio / Editorial</label>
-                            <select name="MediopublicacionID" class="form-select border-0 bg-white shadow-sm small" required>
-                                @foreach($mediosPub ?? [] as $m)
-                                    <option value="{{ $m->MediopublicacionID }}">{{ $m->Nombremedio }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        {{-- Aquí irían los selects de Tipo y Medio si los pasas desde el controller --}}
                         <div class="col-md-4">
                             <label class="text-xxs fw-bold text-muted text-uppercase">Fecha</label>
                             <input type="date" name="Fechapublicacion" class="form-control border-0 bg-white shadow-sm" required>
                         </div>
                     </div>
-
-                    {{-- 2. VINCULACIÓN AUTOMÁTICA --}}
+                    {{-- Vinculación Automática --}}
                     <div class="bg-blue-soft rounded-3 p-3 border border-blue-100">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-person-check-fill text-upds-blue fs-4 me-3"></i>
-                                <div>
-                                    <h6 class="fw-bold text-dark mb-0">{{ $docente->nombre_institucional }}</h6>
-                                    <small class="text-muted">Se asignará automáticamente como autor.</small>
-                                </div>
-                            </div>
-                            
-                            <div style="width: 200px;">
-                                <label class="text-xxs fw-bold text-upds-blue text-uppercase mb-1">Rol en la obra</label>
-                                <select name="roles[]" class="form-select form-select-sm border-upds-blue fw-bold text-upds-blue">
-                                    @foreach($rolesPub ?? [] as $rol)
-                                        <option value="{{ $rol->RolID }}">{{ $rol->Nombrerol }}</option>
-                                    @endforeach
-                                </select>
-                                {{-- INPUT OCULTO CON EL ID DEL DOCENTE ACTUAL --}}
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-person-check-fill text-upds-blue fs-4 me-3"></i>
+                            <div>
+                                <h6 class="fw-bold text-dark mb-0">{{ $docente->nombre_institucional }}</h6>
+                                <small class="text-muted">Se asignará como autor principal.</small>
                                 <input type="hidden" name="autores[]" value="{{ $docente->PersonalID }}">
                             </div>
                         </div>
                     </div>
-
                 </div>
                 <div class="modal-footer border-0 bg-white p-3">
                     <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-sia-primary rounded-pill px-4 shadow-sm">
-                        <i class="bi bi-save-fill me-2"></i> Guardar y Asignar
-                    </button>
+                    <button type="submit" class="btn btn-sia-primary rounded-pill px-4 shadow-sm">Guardar Obra</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+{{-- MODAL SIMPLIFICADO: REGISTRAR NUEVA FORMACIÓN --}}
+<div class="modal fade" id="modalCrearFormacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-upds-blue text-white px-4 py-3">
+                <h6 class="modal-title fw-bold small text-uppercase">Registrar Formación Académica</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <form action="{{ route('formacion.store') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="PersonalID" value="{{ $docente->PersonalID }}">
+                
+                <div class="modal-body p-4 bg-gray-50">
+                    <div class="row g-3">
+                        {{-- 1. Nivel Académico --}}
+                        <div class="col-12">
+                            <label class="text-xxs fw-bold text-muted text-uppercase d-block mb-1">Nivel (Grado)</label>
+                            <select name="GradoacademicoID" class="form-select form-select-sm border-0 shadow-sm" required>
+                                <option value="" disabled selected>Seleccione el nivel...</option>
+                                @foreach($grados as $g)
+                                    <option value="{{ $g->GradoacademicoID }}">{{ $g->Nombregrado }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-{{-- SCRIPTS --}}
+                        {{-- 2. Título (Único campo de texto ahora) --}}
+                        <div class="col-12">
+                            <label class="text-xxs fw-bold text-muted text-uppercase d-block mb-1">Título / Carrera (Como dice el cartón)</label>
+                            <input type="text" name="Tituloobtenido" class="form-control form-control-sm border-0 shadow-sm fw-bold" 
+                                   placeholder="Ej: Licenciado en Ingeniería de Sistemas" required>
+                        </div>
+
+                        {{-- 3. Universidad --}}
+                        <div class="col-12">
+                            <label class="text-xxs fw-bold text-muted text-uppercase d-block mb-1">Universidad / Institución</label>
+                            <select name="CentroformacionID" class="form-select form-select-sm border-0 shadow-sm" required>
+                                <option value="" disabled selected>Seleccione la institución...</option>
+                                @foreach($centros as $c)
+                                    <option value="{{ $c->CentroformacionID }}">{{ $c->Nombrecentro }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- 4. Año y PDF --}}
+                        <div class="col-4">
+                            <label class="text-xxs fw-bold text-muted text-uppercase d-block mb-1">Año</label>
+                            <input type="number" name="Añosestudios" class="form-control form-control-sm border-0 shadow-sm text-center" 
+                                   value="{{ date('Y') }}" required>
+                        </div>
+                        <div class="col-8">
+                            <label class="text-xxs fw-bold text-muted text-uppercase d-block mb-1">Respaldo PDF</label>
+                            <input type="file" name="archivo" class="form-control form-control-sm border-0 shadow-sm" accept=".pdf">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 p-3 bg-white">
+                    <button type="button" class="btn btn-light rounded-pill px-4 btn-sm fw-bold" data-bs-dismiss="modal">CANCELAR</button>
+                    <button type="submit" class="btn btn-sia-primary rounded-pill px-4 btn-sm fw-bold">GUARDAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div> 
+
+{{-- SCRIPTS JS PARA LOS MODALES --}}
 <script>
+    // Modal Formación
     function abrirModalPDF(id, titulo) {
-        document.getElementById('form_pdf_id').value = id;
-        document.getElementById('form_pdf_titulo').innerText = titulo;
+        document.getElementById('input_formacion_id').value = id;
+        document.getElementById('label_formacion_titulo').innerText = titulo;
         new bootstrap.Modal(document.getElementById('modalSubirPDF')).show();
+    }
+
+    // Modal Carga Académica
+    function abrirModalAutoeval(id, materia) {
+        document.getElementById('input_pm_id').value = id;
+        document.getElementById('label_materia_nombre').innerText = materia;
+        new bootstrap.Modal(document.getElementById('modalSubirAutoeval')).show();
     }
 </script>
 
 <style>
-    :root {
-        --upds-blue: #003566;
-        --upds-gold: #ffc300;
-        --gray-50: #f8fafc;
-        --blue-soft: #eef2f7;
-    }
-
+    /* Estilos Específicos */
+    :root { --upds-blue: #003566; --upds-gold: #ffc300; --gray-50: #f8fafc; --blue-soft: #eef2f7; }
     .fw-black { font-weight: 900; }
     .text-xxs { font-size: 0.62rem; letter-spacing: 0.5px; }
     .bg-gray-50 { background-color: var(--gray-50) !important; }
     .bg-blue-soft { background-color: var(--blue-soft); }
+    .bg-purple-soft { background-color: #f3e8ff; }
+    .text-purple { color: #7e22ce; }
+    .bg-green-soft { background-color: #dcfce7; }
+    .text-green { color: #15803d; }
     .object-cover { object-fit: cover; }
     
-    /* Pestañas Sobrias */
+    /* Pestañas */
     .sia-tabs .nav-link { color: #94a3b8; font-weight: 800; font-size: 0.72rem; padding: 1.2rem 1.5rem; border: none; border-bottom: 3px solid transparent; transition: 0.3s; }
     .sia-tabs .nav-link.active { color: var(--upds-blue); border-bottom-color: var(--upds-gold); background: white; }
     .sia-tabs .nav-link:hover:not(.active) { color: var(--upds-blue); border-bottom-color: #e2e8f0; }
     
+    /* Botones */
     .btn-sia-primary { background-color: var(--upds-blue); color: white; border: none; transition: 0.3s; }
     .btn-sia-primary:hover { background-color: #00284d; transform: translateY(-1px); color: white; }
+    .btn-white { background-color: white; border-color: #e2e8f0; color: #64748b; }
+    .btn-white:hover { background-color: #f8fafc; border-color: #cbd5e1; color: #0f172a; transform: translateY(-1px); }
+    .btn-ghost-primary { color: var(--upds-blue); background: transparent; border: none; }
+    .btn-ghost-primary:hover { background: #eff6ff; }
+    .btn-ghost-success { color: #16a34a; background: #f0fdf4; border: 1px solid #dcfce7; }
+    .btn-outline-danger { border-color: #fee2e2; color: #dc2626; }
+    .btn-outline-danger:hover { background: #dc2626; color: white; border-color: #dc2626; }
+    .btn-outline-warning { border-color: #fef3c7; color: #d97706; }
+    .btn-outline-warning:hover { background: #d97706; color: white; border-color: #d97706; }
+    .hover-scale:hover { transform: scale(1.02); transition: 0.2s; }
     
-    .btn-outline-upds { border: 2px solid var(--upds-blue); color: var(--upds-blue); font-weight: 800; font-size: 0.65rem; transition: 0.2s; }
-    .btn-outline-upds:hover { background: var(--upds-blue); color: white; }
-
     .border-end-md { border-right: 1px solid #e2e8f0; }
-
-    @media (max-width: 768px) {
-        .border-end-md { border-right: none; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; }
-    }
-
-    @media print {
-        .btn, nav, .card-header button, .modal, .breadcrumb { display: none !important; }
-        .card { box-shadow: none !important; border: 1px solid #eee !important; }
-        .bg-gray-50 { background-color: white !important; }
-        body { background: white !important; }
-    }
+    @media (max-width: 768px) { .border-end-md { border-right: none; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; } }
+    @media print { .btn, nav, .card-header button, .modal, .breadcrumb { display: none !important; } body { background: white !important; } }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 </style>
 @endsection

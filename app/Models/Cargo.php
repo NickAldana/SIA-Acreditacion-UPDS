@@ -9,19 +9,18 @@ class Cargo extends Model
 {
     use HasFactory;
 
-    // 1. Configuración de Tabla V3.1
     protected $table = 'Cargo';
     protected $primaryKey = 'CargoID';
     public $timestamps = false;
 
-    // 2. CONSTANTES DE NIVEL (Para no usar números "mágicos" en tu código)
-    // Úsalas en tus Controladores así: Cargo::NIVEL_AUTORIDAD
-    const NIVEL_AUTORIDAD     = 1; // Rector, Vicerrector, Decano
-    const NIVEL_DIRECTIVO     = 2; // Directores de Carrera / Jefes Dpto
-    const NIVEL_DOCENTE       = 3; // Docentes Tiempo Completo / Horario
-    const NIVEL_ADMINISTRATIVO= 4; // Secretarias, Asistentes
+    // --- ESCALA DE JERARQUÍA (Basada en tu DB) ---
+    // 100: Rector
+    // 95: Vicerrector
+    // 90: Dir. Acreditación
+    // 80: Decano
+    // 50: Jefe de Carrera
+    // 10: Docente
 
-    // 3. Limpieza: Quitamos 'Idcargo' porque en el Script V3.1 lo borramos.
     protected $fillable = [
         'Nombrecargo', 
         'nivel_jerarquico' 
@@ -31,44 +30,30 @@ class Cargo extends Model
         'nivel_jerarquico' => 'integer',
     ];
 
-    // --- RELACIONES ---
-
-    /**
-     * Relación con Personal: ¿Quiénes ocupan este cargo?
-     */
     public function personal()
     {
         return $this->hasMany(Personal::class, 'CargoID', 'CargoID');
     }
 
-    /**
-     * Relación con Permisos (Seguridad RBAC)
-     * Tabla intermedia: Cargopermiso
-     */
     public function permisos()
     {
-        return $this->belongsToMany(
-            Permiso::class, 
-            'Cargopermiso', // Tabla pivot V3.1
-            'CargoID',      // FK local
-            'PermisosID'    // FK destino
-        );
+        return $this->belongsToMany(Permiso::class, 'Cargopermiso', 'CargoID', 'PermisosID')
+                    ->using(Cargopermiso::class);
     }
 
-    // --- ACCESORES DE ANALÍTICA ---
-
     /**
-     * Devuelve un texto legible del nivel para las Vistas (Blade)
-     * Uso: {{ $cargo->nivel_legible }}
+     * Accesor inteligente: Convierte el número (0-100) en texto legible.
      */
     public function getNivelLegibleAttribute()
     {
-        return match($this->nivel_jerarquico) {
-            self::NIVEL_AUTORIDAD      => 'Alta Dirección',
-            self::NIVEL_DIRECTIVO      => 'Dirección / Jefatura',
-            self::NIVEL_DOCENTE        => 'Plantel Docente',
-            self::NIVEL_ADMINISTRATIVO => 'Personal Administrativo',
-            default                    => 'Sin Clasificar',
-        };
+        $n = $this->nivel_jerarquico;
+
+        // Lógica de rangos para abarcar tu estructura actual y futura
+        if ($n >= 90) return 'Alta Dirección (Estratégico)'; // Rector, Vice, Dir. Acreditación
+        if ($n >= 80) return 'Decanatura (Táctico)';        // Decanos
+        if ($n >= 50) return 'Jefatura / Dirección';         // Jefes de Carrera
+        if ($n >= 10) return 'Plantel Docente / Operativo';  // Docentes
+        
+        return 'Personal de Apoyo'; // Menor a 10
     }
 }

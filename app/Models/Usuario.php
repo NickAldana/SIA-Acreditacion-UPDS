@@ -4,87 +4,86 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Usuario extends Authenticatable
 {
     use Notifiable;
 
-    // 1. Configuración de Tabla (SQL Server V3.1)
-    protected $table = 'Usuario';
-    protected $primaryKey = 'UsuarioID'; // PK Identity
-    public $timestamps = false; // No usas created_at/updated_at estándar
+    protected $table = 'usuario';
+    protected $primaryKey = 'UsuarioID';
+    public $timestamps = false;
 
-    // 2. Campos Asignables
+    /**
+     * Caché de permisos por instancia para optimizar el rendimiento (Request Singleton).
+     */
+    protected $permisosCache = null;
+
     protected $fillable = [
-        'NombreUsuario',      // Login del sistema (ej: 'jperez')
-        'Correo',             // Email único
-        'Contraseña',         // Hash
-        'RecordatorioToken',  // Token de "Recuérdame"
-        'Activo',             // 1 o 0
-        'Idpersonal'          // Referencia cruzada (opcional, pero está en tu tabla)
+        'NombreUsuario', 'Correo', 'Contraseña', 'RecordatorioToken', 'Activo', 'Idpersonal'
     ];
 
-    // 3. Seguridad
-    protected $hidden = [
-        'Contraseña',
-        'RecordatorioToken',
-    ];
+    protected $hidden = ['Contraseña', 'RecordatorioToken'];
 
     protected $casts = [
         'Activo' => 'boolean',
         'Creacionfecha' => 'datetime',
+        'Finalfecha' => 'datetime',
     ];
 
-    // ========================================================================
-    // CONFIGURACIÓN DE AUTH (PUENTE LARAVEL <-> SQL ESPAÑOL)
-    // ========================================================================
+    // --- Autenticación ---
+    public function getAuthPassword() { return $this->Contraseña; }
+    public function getRememberTokenName() { return 'RecordatorioToken'; }
 
-    // Laravel busca 'password', le damos 'Contraseña'
-    public function getAuthPassword()
-    {
-        return $this->Contraseña;
-    }
-
-    // Laravel busca 'remember_token', le damos 'RecordatorioToken'
-    public function getRememberTokenName()
-    {
-        return 'RecordatorioToken';
-    }
-
-    // ========================================================================
-    // RELACIONES
-    // ========================================================================
-
-    /**
-     * Un Usuario tiene asociado UN perfil de Personal.
-     * La FK está en la tabla 'Personal' (UsuarioID).
-     */
-    public function personal()
+    // --- Relaciones ---
+    public function personal(): HasOne
     {
         return $this->hasOne(Personal::class, 'UsuarioID', 'UsuarioID');
     }
 
     // ========================================================================
-    // LÓGICA DE PERMISOS (RBAC) - TU FUNCIÓN 'canDo' ACTUALIZADA
+    // MOTOR DE PERMISOS ESCALABLE (SEG-03)
     // ========================================================================
 
     /**
-     * Verifica si el usuario tiene permiso para una acción.
-     * Ruta: Usuario -> Personal -> Cargo -> Permisos
-     * Uso: if ($user->canDo('crear.docente')) { ... }
+     * Verifica si el usuario posee un permiso específico.
+     * Soporta la creación de nuevos cargos y permisos dinámicamente.
      */
-    public function canDo($nombrePermiso)
+    public function canDo(string $nombrePermiso): bool
     {
-        // 1. Validaciones básicas: Debe estar activo y tener perfil asociado
-        if (!$this->Activo || !$this->personal || !$this->personal->cargo) {
-            return false;
+        // 1. Filtro de seguridad inmediato
+        if (!$this->Activo) return false;
+
+        // 2. Obtener lista de nombres de permisos (Usa la caché interna)
+        $misPermisos = $this->getListaPermisos();
+
+        // 3. Validación: Si el cargo tiene 'acceso_total', es Super Admin
+        if (in_array('acceso_total', $misPermisos)) return true;
+
+        // 4. Verificación del permiso solicitado
+        return in_array($nombrePermiso, $misPermisos);
+    }
+
+    /**
+     * Centraliza la carga de permisos a través de la cadena:
+     * Usuario -> Personal -> Cargo -> Permisos (N:M)
+     */
+    protected function getListaPermisos(): array
+    {
+        if ($this->permisosCache !== null) return $this->permisosCache;
+
+        // Si no tiene perfil o cargo asignado, no tiene permisos
+        if (!$this->personal || !$this->personal->cargo) {
+            return $this->permisosCache = [];
         }
 
-        // 2. Obtener los permisos del cargo (Laravel cachea esto si usas 'with')
-        $permisos = $this->personal->cargo->permisos;
+        // Extraemos solo los nombres de los permisos vinculados al Cargo
+        // Esto permite que al crear un Cargo nuevo en la web, canDo() lo reconozca al instante.
+        $this->permisosCache = $this->personal->cargo->permisos()
+                                    ->pluck('Nombrepermiso')
+                                    ->toArray();
 
-        // 3. Buscar si existe el permiso en la colección
-        // Nota: Usamos 'Nombrepermiso' tal cual está en el modelo Permiso
-        return $permisos->contains('Nombrepermiso', $nombrePermiso);
+        return $this->permisosCache;
     }
 }

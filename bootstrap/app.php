@@ -12,9 +12,15 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         
-        // Registramos el middleware de seguridad global
+        // 1. Registramos el middleware de seguridad global (Ya lo tenías)
         $middleware->web(append: [
             \App\Http\Middleware\CheckUserActive::class,
+        ]);
+        
+        // 2. REGISTRAMOS EL ALIAS PARA LA JERARQUÍA
+        // Esto permite usar 'jerarquia:N' en los archivos de rutas
+        $middleware->alias([
+            'jerarquia' => \App\Http\Middleware\HierarchicalAccess::class,
         ]);
         
         // Redirección personalizada si no está logueado

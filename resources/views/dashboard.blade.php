@@ -3,7 +3,7 @@
 @section('content')
 <div class="container-fluid py-2">
 
-    {{-- 1. ALERTA DE SEGURIDAD --}}
+    {{-- 1. ALERTA DE SEGURIDAD (V6: Fotoperfil) --}}
     @if(auth()->user()->personal && empty(auth()->user()->personal->Fotoperfil))
         <div class="alert bg-white border-l-4 shadow-sm rounded-3 mb-4 d-flex align-items-center p-4 animate__animated animate__fadeInDown" role="alert" style="border-left: 5px solid var(--upds-gold);">
             <div class="rounded-circle bg-yellow-50 text-yellow-600 p-2 me-3 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
@@ -25,11 +25,13 @@
                 
                 <div class="position-relative z-10">
                     <h2 class="fw-black text-upds-blue mb-1 ls-tight">
+                        {{-- V6: Nombrecompleto --}}
                         Hola, {{ auth()->user()->personal ? explode(' ', auth()->user()->personal->Nombrecompleto)[0] : 'Administrador' }}
                     </h2>
                     <p class="text-secondary mb-0 fw-medium">
                         Sistema Integral de Acreditación. Su rol actual: 
                         <span class="badge bg-upds-gold text-upds-blue fw-bold px-3 py-2 rounded-pill ms-2 shadow-sm uppercase tracking-wider" style="font-size: 0.7rem;">
+                            {{-- V6: Nombrecargo --}}
                             {{ auth()->user()->personal->cargo->Nombrecargo ?? 'Gestor SIA' }}
                         </span>
                     </p>
@@ -47,7 +49,7 @@
         
         <h6 class="text-xs fw-bold text-muted uppercase tracking-wider mb-3 ps-1">Indicadores de Gestión &bull; Año {{ date('Y') }}</h6>
 
-        {{-- SECCIÓN KPI: BALANCEADA A 4 INDICADORES --}}
+        {{-- SECCIÓN KPI --}}
         <div class="row g-4 mb-5">
             {{-- 1. Total Personal --}}
             <div class="col-md-6 col-xl-3">
@@ -77,7 +79,6 @@
                     <div class="sia-icon-box bg-yellow-50 text-upds-gold-dark mb-3">
                         <i class="bi bi-journal-bookmark-fill"></i>
                     </div>
-                    {{-- AJUSTE: Variable $totalMaterias --}}
                     <h3 class="fw-black text-dark mb-0">{{ $totalMaterias ?? 0 }}</h3>
                     <p class="text-[10px] text-muted font-bold uppercase mt-1">Materias de la Gestión</p>
                 </div>
@@ -89,7 +90,6 @@
                     <div class="sia-icon-box bg-red-50 text-danger mb-3">
                         <i class="bi bi-file-earmark-pdf-fill"></i>
                     </div>
-                    {{-- AJUSTE: Usamos $pendientesPDF --}}
                     <h3 class="fw-black text-dark mb-0">{{ $pendientesPDF ?? 0 }}</h3>
                     <p class="text-[10px] text-muted font-bold uppercase mt-1">Sin Respaldo Digital</p>
                 </div>
@@ -171,6 +171,7 @@
                 <div class="sia-card h-100 p-4 hover-lift d-flex align-items-center">
                     <div class="me-4 position-relative">
                         @if(auth()->user()->personal && auth()->user()->personal->Fotoperfil)
+                            {{-- V6: Fotoperfil --}}
                             <img src="{{ asset('storage/' . auth()->user()->personal->Fotoperfil) }}" class="rounded-circle shadow-sm border border-2 border-white" style="width: 80px; height: 80px; object-fit: cover;">
                         @else
                             <div class="bg-gray-100 text-gray-400 p-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
@@ -183,7 +184,7 @@
                         <h5 class="fw-bold text-dark">Mi Hoja de Vida</h5>
                         <p class="text-muted small mb-3">Acceda a su expediente digital y controle su historial académico.</p>
                         <div class="d-flex gap-2">
-                            {{-- AJUSTE: PersonalID --}}
+                            {{-- V6: PersonalID --}}
                             <a href="{{ route('personal.show', auth()->user()->personal->PersonalID) }}" class="btn btn-sia-primary btn-sm rounded-pill px-3">Entrar al Perfil</a>
                             <a href="{{ route('personal.print', auth()->user()->personal->PersonalID) }}" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
                                 <i class="bi bi-file-earmark-pdf"></i>
@@ -207,6 +208,7 @@
 
 </div>
 
+{{-- Estilos encapsulados para el Dashboard --}}
 <style>
     :root {
         --upds-blue: #003566;
@@ -219,7 +221,7 @@
     .bg-upds-blue { background-color: var(--upds-blue) !important; }
     .bg-upds-gold { background-color: var(--upds-gold) !important; }
     .fw-black { font-weight: 900; }
-    .text-\[10px\] { font-size: 10px; }
+    .text-[10px] { font-size: 10px; }
     
     .sia-card { background: white; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border-radius: 1rem; transition: all 0.2s; }
     .sia-stat-card { background: white; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #f1f5f9; transition: all 0.3s ease; }

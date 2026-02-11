@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Nuevo Proyecto de Investigación')
+
 @section('content')
 <div class="py-12 bg-slate-50 min-h-screen">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -12,6 +14,13 @@
             </div>
         @endif
 
+        @if(session('error'))
+            <div class="mb-6 p-4 bg-rose-50 border-l-4 border-rose-500 text-rose-700 rounded-r-xl shadow-sm flex items-center animate-fade-in">
+                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                <span class="text-sm font-bold tracking-wide">{{ session('error') }}</span>
+            </div>
+        @endif
+
         <div class="bg-white shadow-xl rounded-2xl border border-slate-200 overflow-hidden">
             {{-- Encabezado Principal --}}
             <div class="bg-[#003566] p-6 text-white flex justify-between items-center">
@@ -19,13 +28,14 @@
                     <h2 class="text-2xl font-bold tracking-tight uppercase">Gestión de Proyectos</h2>
                     <p class="text-blue-100 text-xs mt-1 font-medium uppercase tracking-widest">Formulario de registro oficial de investigación</p>
                 </div>
-                <a href="{{ route('investigacion.index') }}" class="flex items-center text-sm font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all border border-white/20">
+                <a href="{{ route('investigacion.index') }}" class="flex items-center text-sm font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-all border border-white/20 text-decoration-none text-white">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                     LISTADO PROYECTOS
                 </a>
             </div>
 
-            <form action="{{ route('investigacion.storeProyecto') }}" method="POST" id="formProyecto" class="p-8 space-y-10">
+            {{-- CORREGIDO: Action apunta a 'investigacion.store' --}}
+            <form action="{{ route('investigacion.store') }}" method="POST" id="formProyecto" class="p-8 space-y-10">
                 @csrf
 
                 {{-- Sección 1: Información General --}}
@@ -99,7 +109,7 @@
                             <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider">Cuerpo de Investigadores</h3>
                         </div>
                         <button type="button" id="btn-add-member" 
-                            class="text-[10px] font-black uppercase tracking-tighter bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 shadow-sm transition-all flex items-center">
+                            class="text-[10px] font-black uppercase tracking-tighter bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 shadow-sm transition-all flex items-center border-0 cursor-pointer">
                             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
                             Incorporar Miembro
                         </button>
@@ -126,7 +136,7 @@
                 {{-- Footer de Formulario --}}
                 <div class="pt-6 flex justify-end items-center space-x-4 border-t border-slate-100">
                     <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verifique que toda la información sea veraz</span>
-                    <button type="submit" class="px-10 py-4 bg-[#003566] text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 transition-all transform hover:-translate-y-1 active:scale-95">
+                    <button type="submit" class="px-10 py-4 bg-[#003566] text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 transition-all transform hover:-translate-y-1 active:scale-95 border-0 cursor-pointer">
                         Confirmar Registro
                     </button>
                 </div>
@@ -227,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="checkbox" value="1" class="rounded text-[#003566] h-5 w-5 border-slate-300 focus:ring-0 cursor-pointer jefe-checkbox">
             </td>
             <td class="px-6 py-4 text-center">
-                <button type="button" class="btn-remove text-slate-300 hover:text-rose-600 transition-colors p-1">
+                <button type="button" class="btn-remove text-slate-300 hover:text-rose-600 transition-colors p-1 border-0 bg-transparent cursor-pointer">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
             </td>

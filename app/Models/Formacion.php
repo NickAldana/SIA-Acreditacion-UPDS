@@ -9,45 +9,56 @@ class Formacion extends Model
 {
     use HasFactory;
 
-    // 1. Configuración V3.1
+    // 1. Configuración de Tabla
     protected $table = 'Formacion';
     protected $primaryKey = 'FormacionID';
     public $timestamps = false;
 
-    // 2. Campos
+    // 2. Mapeo de Columnas (Tal cual tu BD)
     protected $fillable = [
-        'NombreProfesion',   // Ej: "Ingeniero en Sistemas"
-        'Tituloobtenido',    // Ej: "Licenciatura"
-        'Añosestudios',      // Ej: 5
-        'RutaArchivo',       // VITAL: Path al PDF escaneado
-        'CentroformacionID', // Dónde estudió
-        'PersonalID',        // Quién es
-        'GradoacademicoID'   // Qué nivel es (PhD, MSc)
+        'NombreProfesion',   
+        'Tituloobtenido',    
+        'Añosestudios',      
+        'RutaArchivo',       
+        'CentroformacionID', // FK
+        'PersonalID',        // FK
+        'GradoacademicoID'   // FK
     ];
 
     // ========================================================================
-    // RELACIONES
+    // RELACIONES (AQUÍ ESTABA EL POSIBLE ERROR)
     // ========================================================================
 
+    /**
+     * Relación con el Docente
+     * Especificamos 'PersonalID' dos veces para evitar que busque 'personal_id'
+     */
     public function personal()
     {
         return $this->belongsTo(Personal::class, 'PersonalID', 'PersonalID');
     }
 
+    /**
+     * Relación con el Centro de Formación (Universidad)
+     * Especificamos 'CentroformacionID' explícitamente
+     */
     public function centro()
     {
-        return $this->belongsTo(Centroformacion::class, 'CentroformacionID', 'CentroformacionID');
+        return $this->belongsTo(Centroformacion::class, 'CentroformacionID', 'CentroformacionID')
+                    ->withDefault(['Nombrecentro' => 'INSTITUCIÓN EXTERNA']); 
+                    // withDefault evita error si el ID del centro no existe
     }
 
+    /**
+     * Relación con el Grado (Licenciatura, Maestría, etc)
+     */
     public function grado()
     {
-        return $this->belongsTo(Gradoacademico::class, 'GradoacademicoID', 'GradoacademicoID');
+        return $this->belongsTo(Gradoacademico::class, 'GradoacademicoID', 'GradoacademicoID')
+                    ->withDefault(['Nombregrado' => 'GRADO ACADÉMICO']);
     }
 
-    // ========================================================================
-    // HELPER (FULLSTACK)
-    // ========================================================================
-    // Verifica si hay evidencia digital cargada
+    // Helper para verificar PDF en la vista
     public function getTieneEvidenciaAttribute()
     {
         return !empty($this->RutaArchivo);

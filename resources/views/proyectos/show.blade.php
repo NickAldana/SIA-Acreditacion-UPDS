@@ -12,15 +12,23 @@
                 <i class="fas fa-arrow-left mr-2"></i> Volver al Listado
             </a>
 
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2 justify-center md:justify-end">
+                {{-- Botón 1: Reporte PDF --}}
                 <a href="{{ route('investigacion.pdf_proyectos', ['id' => $proyecto->ProyectoinvestigacionID]) }}" 
-                   class="px-6 py-2.5 bg-rose-700 text-white rounded shadow-md text-[10px] font-black uppercase tracking-widest hover:bg-rose-800 transition-all flex items-center no-underline">
-                    <i class="fas fa-file-pdf mr-2"></i> Acta de Auditoría
+                   class="px-5 py-2.5 bg-rose-700 text-white rounded shadow-md text-[10px] font-black uppercase tracking-widest hover:bg-rose-800 transition-all flex items-center no-underline">
+                    <i class="fas fa-file-pdf mr-2"></i> Acta Auditoría
                 </a>
 
+                {{-- Botón 2: Módulo Financiero (NUEVO) --}}
+                <a href="{{ route('presupuesto.index', $proyecto->ProyectoinvestigacionID) }}" 
+                   class="px-5 py-2.5 bg-emerald-600 text-white rounded shadow-md text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center no-underline">
+                    <i class="fas fa-hand-holding-dollar mr-2"></i> Gestión Financiera
+                </a>
+
+                {{-- Botón 3: Editar (Solo si está activo) --}}
                 @if(!in_array($proyecto->Estado, ['Finalizado', 'Cancelado']))
-                <a href="{{ route('investigacion.editProyecto', $proyecto->ProyectoinvestigacionID) }}" class="px-6 py-2.5 bg-[#FFC300] text-[#003566] rounded shadow-md text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all flex items-center no-underline">
-                    <i class="fas fa-pen-to-square mr-2"></i> Gestionar Expediente
+                <a href="{{ route('investigacion.edit', $proyecto->ProyectoinvestigacionID) }}" class="px-5 py-2.5 bg-[#FFC300] text-[#003566] rounded shadow-md text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all flex items-center no-underline">
+                    <i class="fas fa-pen-to-square mr-2"></i> Editar Datos
                 </a>
                 @endif
             </div>
@@ -52,7 +60,7 @@
                         <div class="flex flex-wrap gap-6 text-blue-100/80 text-[10px] font-bold uppercase tracking-wider">
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-university text-[#FFC300]"></i>
-                                {{ $proyecto->carrera->Nombrecarrera ?? 'Institucional' }}
+                                {{ $proyecto->carrera->Nombrecarrera ?? 'Institucional / Multidisciplinario' }}
                             </div>
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-layer-group text-[#FFC300]"></i>
@@ -61,10 +69,9 @@
                         </div>
                     </div>
 
-                    {{-- SELLO DE DÍAS (Modificado según solicitud) --}}
+                    {{-- SELLO DE DÍAS --}}
                     <div class="text-center">
                         @php
-                            // Mantenemos colores para contexto (Verde=Bien, Rojo=Cancelado, etc.)
                             $estadoColor = match($proyecto->Estado) {
                                 'En Ejecución' => 'text-emerald-400 border-emerald-400',
                                 'Planificado' => 'text-blue-400 border-blue-400',
@@ -73,22 +80,17 @@
                                 default => 'text-white border-white'
                             };
 
-                            // Calculamos días
                             $inicio = \Carbon\Carbon::parse($proyecto->Fechainicio);
                             $fin = $proyecto->Fechafinalizacion ? \Carbon\Carbon::parse($proyecto->Fechafinalizacion) : now();
-                            $diasBadge = floor($inicio->diffInDays($fin));
+                            // Usamos abs() para evitar negativos si es planificado a futuro
+                            $diasBadge = floor(abs($inicio->diffInDays($fin)));
                         @endphp
                         
                         <div class="border-4 {{ $estadoColor }} px-6 py-4 rounded-lg bg-white/5 backdrop-blur-sm transform rotate-[-2deg]">
-                            {{-- ETIQUETA SUPERIOR --}}
                             <p class="text-[10px] uppercase tracking-[0.3em] text-white/60 mb-1">Días Acumulados</p>
-                            
-                            {{-- NÚMERO GRANDE --}}
                             <p class="text-4xl font-black uppercase tracking-tighter {{ explode(' ', $estadoColor)[0] }}">
                                 {{ number_format($diasBadge, 0, ',', '.') }}
                             </p>
-                            
-                            {{-- ETIQUETA INFERIOR (Estado pequeño) --}}
                             <p class="text-[8px] font-bold uppercase tracking-widest text-white/40 mt-1">
                                 {{ $proyecto->Estado }}
                             </p>
@@ -115,7 +117,6 @@
                         @endif
                     </p>
                 </div>
-                {{-- Columna 3: Información adicional (Ya que los días están arriba, mostramos el Estado aquí para no perder el dato) --}}
                 <div class="p-6 bg-blue-50/50">
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Condición Actual</p>
                     <p class="text-sm font-black text-[#003566] uppercase">
@@ -210,7 +211,7 @@
                     </div>
                 </div>
 
-           {{-- 4. PUBLICACIONES CIENTÍFICAS (CORREGIDO) --}}
+                {{-- 4. PRODUCCIÓN INTELECTUAL --}}
                 <div class="space-y-6">
                     <div class="flex items-center gap-4">
                         <div class="w-1 h-6 bg-[#003566]"></div>
@@ -218,40 +219,29 @@
                         <div class="flex-1 h-px bg-slate-200"></div>
                     </div>
 
-                    @if($proyecto->publicaciones->count() > 0)
+                    @if($proyecto->publicaciones && $proyecto->publicaciones->count() > 0)
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             @foreach($proyecto->publicaciones as $pub)
                                 <div class="p-4 border border-slate-200 rounded hover:border-blue-300 transition-colors bg-white flex gap-4 items-start group">
-                                    {{-- Ícono --}}
                                     <div class="w-10 h-10 bg-blue-50 text-blue-600 flex items-center justify-center rounded group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
                                         <i class="fas fa-book-open"></i>
                                     </div>
-                                    
-                                    {{-- Datos de la Publicación --}}
                                     <div class="flex-1 min-w-0">
-                                        {{-- 1. TÍTULO REAL --}}
                                         <h4 class="text-[11px] font-black text-slate-800 uppercase leading-tight truncate" title="{{ $pub->Nombrepublicacion }}">
                                             {{ $pub->Nombrepublicacion }}
                                         </h4>
-                                        
                                         <div class="flex items-center flex-wrap gap-2 mt-2 text-[9px] font-bold text-slate-500 uppercase">
-                                            {{-- 2. TIPO DE PUBLICACIÓN (Relación Correcta) --}}
                                             <span class="text-blue-600">
-                                                {{ $pub->tipo->Nombretipo ?? 'No Categorizado' }}
+                                                {{ $pub->tipo->Nombretipo ?? 'General' }}
                                             </span>
-                                            
                                             <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                            
-                                            {{-- 3. FECHA FORMATEADA --}}
                                             <span>
                                                 {{ $pub->Fechapublicacion ? \Carbon\Carbon::parse($pub->Fechapublicacion)->format('d/m/Y') : 'Fecha Pendiente' }}
                                             </span>
                                         </div>
-
-                                        {{-- 4. ENLACE (Si existe) --}}
                                         @if($pub->UrlPublicacion)
                                             <a href="{{ $pub->UrlPublicacion }}" target="_blank" class="text-[9px] text-[#003566] hover:underline mt-2 flex items-center gap-1 font-bold">
-                                                <i class="fas fa-external-link-alt"></i> Ver Documento Digital
+                                                <i class="fas fa-external-link-alt"></i> Ver Documento
                                             </a>
                                         @endif
                                     </div>

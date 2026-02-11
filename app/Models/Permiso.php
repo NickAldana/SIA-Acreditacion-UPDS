@@ -10,14 +10,17 @@ class Permiso extends Model
     use HasFactory;
 
     protected $table = 'Permisos';
-    protected $primaryKey = 'PermisosID';
+    protected $primaryKey = 'PermisosID'; // Corregido según tu estructura
     public $timestamps = false;
 
     protected $fillable = ['Nombrepermiso', 'Descripcion'];
 
-    // Relación inversa
+    /**
+     * Relación inversa con Cargos
+     */
     public function cargos()
     {
-        return $this->belongsToMany(Cargo::class, 'Cargopermiso', 'PermisosID', 'CargoID');
+        return $this->belongsToMany(Cargo::class, 'Cargopermiso', 'PermisosID', 'CargoID')
+                    ->using(Cargopermiso::class);
     }
 }

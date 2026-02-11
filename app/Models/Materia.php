@@ -14,11 +14,11 @@ class Materia extends Model
     protected $primaryKey = 'MateriaID';
     public $timestamps = false;
 
-    // 2. Campos (Sigla es el protagonista aquí)
+    // 2. CAMPOS (CORREGIDO)
+    // Quitamos 'CarreraID' porque NO es una columna física en esta tabla.
     protected $fillable = [
         'Sigla',          // Ej: INF110
         'Nombremateria',  // Ej: Estructuras de Datos I
-        'CarreraID'       // FK
     ];
 
     // ========================================================================
@@ -26,26 +26,33 @@ class Materia extends Model
     // ========================================================================
 
     /**
-     * Jerarquía: Pertenece a una Carrera.
+     * RELACIÓN CORREGIDA (N:M)
+     * Una materia está vinculada a carreras mediante la tabla 'Materiacarrera'.
+     * Usamos belongsToMany en lugar de belongsTo.
      */
-    public function carrera()
+    public function carreras()
     {
-        return $this->belongsTo(Carrera::class, 'CarreraID', 'CarreraID');
+        return $this->belongsToMany(
+            Carrera::class, 
+            'Materiacarrera', // Nombre exacto de tu tabla intermedia
+            'MateriaID',      // FK de este modelo en la pivote
+            'CarreraID'       // FK del otro modelo en la pivote
+        );
     }
 
     /**
      * Carga Horaria: ¿Quién dicta esta materia?
-     * IMPORTANTE: Incluimos 'RutaAutoevaluacion' para poder descargar el PDF desde aquí.
+     * Tabla Pivote: Personalmateria
      */
     public function docentes()
     {
         return $this->belongsToMany(Personal::class, 'Personalmateria', 'MateriaID', 'PersonalID')
                     ->withPivot('PersonalmateriaID', 'Gestion', 'Periodo', 'RutaAutoevaluacion')
-                    ->as('asignacion'); // Alias para usar en Blade: $materia->asignacion->Gestion
+                    ->as('asignacion'); 
     }
 
     // ========================================================================
-    // SCOPES (BÚSQUEDAS RÁPIDAS)
+    // SCOPES
     // ========================================================================
 
     public function scopePorSigla($query, $sigla)

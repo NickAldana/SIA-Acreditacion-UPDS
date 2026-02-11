@@ -67,7 +67,7 @@ class Personal extends Model
     }
 
     // ========================================================================
-    // RELACIONES DE CATÁLOGO (PADRES) [cite: 112, 113, 114, 115]
+    // RELACIONES DE CATÁLOGO (PADRES)
     // ========================================================================
 
     public function usuario()
@@ -91,7 +91,7 @@ class Personal extends Model
     }
 
     // ========================================================================
-    // RELACIONES OPERATIVAS (HIJOS) [cite: 116, 118, 121, 123]
+    // RELACIONES OPERATIVAS (HIJOS)
     // ========================================================================
 
     /**
@@ -103,17 +103,18 @@ class Personal extends Model
     }
 
     /**
-     * Materias con Carga Académica y EVIDENCIA (RutaAutoevaluacion) [cite: 119, 120]
+     * Materias con Carga Académica y EVIDENCIA (RutaAutoevaluacion)
+     * AJUSTADO: Se agregaron los campos extra 'Grupo' y 'Modalidad' al pivot.
      */
     public function materias()
     {
         return $this->belongsToMany(Materia::class, 'Personalmateria', 'PersonalID', 'MateriaID')
-                    ->withPivot('PersonalmateriaID', 'Gestion', 'Periodo', 'RutaAutoevaluacion')
+                    ->withPivot('PersonalmateriaID', 'Gestion', 'Periodo', 'Grupo', 'Modalidad', 'RutaAutoevaluacion')
                     ->as('carga'); 
     }
 
     /**
-     * Proyectos de Investigación y Roles [cite: 122]
+     * Proyectos de Investigación y Roles
      */
     public function proyectos()
     {
@@ -131,7 +132,7 @@ class Personal extends Model
     }
 
     // ========================================================================
-    // SCOPES (FILTROS RÁPIDOS) [cite: 125]
+    // SCOPES (FILTROS RÁPIDOS)
     // ========================================================================
     
     public function scopeActivos($query)
@@ -141,11 +142,16 @@ class Personal extends Model
 
     /**
      * Filtra docentes que pertenezcan a una carrera específica a través de sus materias.
+     * CORREGIDO: Ahora navega la relación N:M entre Materia y Carrera.
      */
     public function scopeDeCarrera($query, $carreraId)
     {
-        return $query->whereHas('materias', function($q) use ($carreraId) {
-            $q->where('CarreraID', $carreraId);
+        return $query->whereHas('materias', function($qMateria) use ($carreraId) {
+            // Entramos a la relación 'carreras' del modelo Materia
+            $qMateria->whereHas('carreras', function($qCarrera) use ($carreraId) {
+                // Especificamos la tabla para evitar error de "Ambiguous column"
+                $qCarrera->where('Carrera.CarreraID', $carreraId);
+            });
         });
     }
 }

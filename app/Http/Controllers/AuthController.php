@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-use App\Models\Usuario; // Importamos el modelo correcto para SQL Server 
+use App\Models\Bitacora;
 
 class AuthController extends Controller
 {
@@ -14,7 +14,7 @@ class AuthController extends Controller
      */
     public function showLoginForm()
     {
-        // Si ya está autenticado, lo enviamos al panel interno
+        // Evita que un usuario ya logueado vea el login
         if (Auth::check()) {
             return redirect()->route('dashboard');
         }
@@ -22,63 +22,85 @@ class AuthController extends Controller
     }
 
     /**
-     * Procesa la autenticación (Login Local con SQL Server).
+     * Procesa la autenticación del usuario.
      */
     public function login(Request $request)
     {
-        // 1. Validar entradas (manteniendo tus nombres de campo del HTML)
+        // 1. Validación de entradas
         $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ], [
             'email.required' => 'El correo institucional es obligatorio.',
-            'password.required' => 'La contraseña es obligatoria.'
+            'password.required' => 'La contraseña es obligatoria.',
+            'email.email' => 'Por favor, ingrese un correo válido.'
         ]);
 
         $remember = $request->filled('remember');
 
-        // 2. INTENTO DE LOGIN
-        // Mapeo Crítico: 'email' (Request) -> 'Correo' (Tabla Usuario) 
-        // Nota: Laravel usará internamente 'getAuthPassword' para comparar contra 'Contraseña' 
+        // 2. Intento de autenticación
+        // Laravel usará 'Correo' para buscar y comparará con 'Contraseña' gracias a getAuthPassword() en el modelo
         if (Auth::attempt([
             'Correo' => $request->email, 
             'password' => $request->password
         ], $remember)) {
             
-            // 3. Verificación de cuenta activa (Usando el Cast booleano definido en el Modelo) [cite: 92, 94]
-            if (Auth::user()->Activo === false) { 
+            $user = Auth::user();
+
+            // 3. Verificación de Estado Activo
+            if (!$user->Activo) { 
+                // Registramos el ID del usuario aunque se le deniegue el acceso
+                Bitacora::registrar(
+                    'LOGIN_BLOQUEADO', 
+                    "Intento de ingreso con cuenta desactivada: {$user->Correo}", 
+                    $user->UsuarioID
+                );
+
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
                 return back()->withErrors([
-                    'email' => 'Su cuenta ha sido desactivada. Contacte al Vicerrectorado.',
+                    'email' => 'Su cuenta ha sido desactivada por el Vicerrectorado.',
                 ])->withInput();
             }
 
-            // 4. Éxito - regenerar sesión para seguridad
+            // 4. Éxito: Regenerar sesión (Seguridad contra fijación de sesiones)
             $request->session()->regenerate();
+            
+            // Registro de auditoría exitoso
+            Bitacora::registrar('LOGIN', "Inicio de sesión exitoso desde IP: " . $request->ip());
+
             return redirect()->intended('dashboard');
         }
 
-        // 5. Error de credenciales
+        // 5. Fallo de credenciales
+        // Registramos el error sin UsuarioID (porque no sabemos quién es realmente)
+        Bitacora::registrar('LOGIN_ERROR', "Credenciales incorrectas para el correo: {$request->email}");
+
         throw ValidationException::withMessages([
-            'email' => 'Las credenciales no coinciden con nuestros registros.',
+            'email' => 'Las credenciales proporcionadas no coinciden con nuestros registros.',
         ]);
     }
 
     /**
-     * Cerrar sesión.
-     * Ajustado para redirigir a la Portada Principal (Welcome).
+     * Cierra la sesión del sistema.
      */
     public function logout(Request $request)
     {
+        if (Auth::check()) {
+            $correo = Auth::user()->Correo;
+            
+            // Registrar salida antes de destruir la sesión
+            Bitacora::registrar('LOGOUT', "Sesión cerrada por el usuario: {$correo}");
+        }
+
         Auth::logout();
         
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // Redirección a la ruta 'welcome' como solicitaste
+        // Redirección a la ruta 'welcome' definida en tus rutas
         return redirect()->route('welcome');
     }
 }

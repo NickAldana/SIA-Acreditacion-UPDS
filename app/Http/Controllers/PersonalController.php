@@ -21,11 +21,12 @@ class PersonalController extends Controller
     {
         /** @var \App\Models\Usuario $currentUser */
         $currentUser = Auth::user();
+        $gestionActual = date('Y'); // Año dinámico
 
         // ---------------------------------------------------------------------
         // A. PREPARACIÓN DE CATÁLOGOS (Para los Selects del Filtro)
         // ---------------------------------------------------------------------
-        // Usamos Cache para no consultar la BD en cada recarga
+        // Usamos Cache para optimizar la carga
         
         $carreras = Cache::remember('filtro_carreras', 3600, function() {
             return Carrera::orderBy('Nombrecarrera')->get(['CarreraID', 'Nombrecarrera']);
@@ -36,9 +37,8 @@ class PersonalController extends Controller
         });
 
         // ---------------------------------------------------------------------
-        // B. CONSULTA BASE (EAGER LOADING OPTIMIZADO)
+        // B. CONSULTA BASE (OPTIMIZADA)
         // ---------------------------------------------------------------------
-        // Seleccionamos solo lo necesario y cargamos relaciones para evitar N+1
         $query = Personal::select([
                 'PersonalID', 'Nombrecompleto', 'Apellidopaterno', 'Apellidomaterno', 
                 'Ci', 'Correoelectronico', 'Telelefono', 'Fotoperfil', 
@@ -48,9 +48,10 @@ class PersonalController extends Controller
                 'cargo:CargoID,Nombrecargo', 
                 'contrato:TipocontratoID,Nombrecontrato'
             ])
-            // Contamos materias asignadas solo en la gestión actual (KPI útil)
-            ->withCount(['materias' => function($q) {
-                $q->where('Gestion', 2026); // Ajustar año dinámicamente si es necesario
+            // KPI: Contamos materias asignadas en la gestión actual
+            // AJUSTE: Especificamos 'Personalmateria.Gestion' para evitar ambigüedad
+            ->withCount(['materias' => function($q) use ($gestionActual) {
+                $q->where('Personalmateria.Gestion', $gestionActual); 
             }]);
 
         // ---------------------------------------------------------------------
@@ -69,45 +70,53 @@ class PersonalController extends Controller
             });
         }
 
-        // 2. Filtro por Estado (Activo/Inactivo)
+        // 2. Filtro por Estado
         if ($request->filled('estado')) {
             $query->where('Activo', $request->estado);
         }
 
-        // 3. Filtro por Cargo (Ej: Ver solo "Docentes")
+        // 3. Filtro por Cargo
         if ($request->filled('cargo_id')) {
             $query->where('CargoID', $request->cargo_id);
         }
 
-        // 4. Filtro por Carrera (EL MÁS IMPORTANTE)
-        // Como la relación es a través de materias, usamos whereHas
+        // 4. Filtro por Carrera (CORREGIDO PARA TU NUEVA BD)
+        // Lógica: Personal -> Materias -> Carreras (Relación N:M)
         if ($request->filled('carrera_id')) {
-            $query->whereHas('materias', function($q) use ($request) {
-                $q->where('CarreraID', $request->carrera_id)
-                  ->where('Gestion', 2026); // Opcional: ver docentes de esta carrera ESTE año
+            $query->whereHas('materias', function($qMateria) use ($request, $gestionActual) {
+                
+                // 1. Filtramos que la materia pertenezca a la carrera seleccionada
+                $qMateria->whereHas('carreras', function($qCarrera) use ($request) {
+                    $qCarrera->where('Carrera.CarreraID', $request->carrera_id);
+                });
+
+                // 2. (Opcional) Validamos que la asignación sea de este año
+                // Si quitas esto, te mostrará docentes que dieron clases en esa carrera hace 10 años.
+                // Es mejor dejarlo para ver solo el personal "activo" en esa carrera.
+                $qMateria->where('Personalmateria.Gestion', $gestionActual);
             });
         }
 
         // ---------------------------------------------------------------------
-        // D. SEGURIDAD: VISIÓN DE TÚNEL (Si no es Admin Total)
+        // D. SEGURIDAD: VISIÓN DE TÚNEL (RBAC)
         // ---------------------------------------------------------------------
         if (!$currentUser->canDo('acceso_total')) {
-            // Solo ver personal que comparte carrera conmigo (si aplica lógica de negocio)
-            // Ocultar al Rector o cargos superiores
+            // Lógica: Solo ver personal de jerarquía igual o inferior
             $miNivel = $currentUser->personal->cargo->nivel_jerarquico ?? 1000;
+            
             $query->whereHas('cargo', function($q) use ($miNivel) {
-                $q->where('nivel_jerarquico', '>=', $miNivel); // Solo ver gente de mi nivel o inferior
+                $q->where('nivel_jerarquico', '>=', $miNivel); 
             });
         }
 
         // ---------------------------------------------------------------------
         // E. ORDENAMIENTO Y PAGINACIÓN
         // ---------------------------------------------------------------------
-        // Orden alfabético por defecto
         $personales = $query->orderBy('Apellidopaterno')
+                            ->orderBy('Apellidomaterno') // Agregado para mejor orden visual
                             ->orderBy('Nombrecompleto')
                             ->paginate(10)
-                            ->withQueryString(); // Mantiene los filtros al cambiar de página
+                            ->withQueryString();
 
         return view('personal.index', compact('personales', 'carreras', 'cargos'));
     }
@@ -142,56 +151,70 @@ class PersonalController extends Controller
         return view('personal.create', compact('tiposContrato', 'cargos', 'carreras', 'grados'));
     }
 
-    public function store(Request $request)
+public function store(Request $request)
     {
-        // 1. VALIDACIONES
+        // 0. Validaciones (Se mantienen las que ya tienes arriba en el controlador)
         $request->validate([
-            'CargoID'          => 'required|exists:Cargo,CargoID',
-            'Nombrecompleto'   => 'required|string|min:3|max:200',
-            'Apellidopaterno'  => 'required|string|min:2|max:100',
-            'Ci'               => 'required|string|max:20|unique:Personal,Ci',
-            'Genero'           => 'required|string|in:Masculino,Femenino',
-            'TipocontratoID'   => 'required|exists:Tipocontrato,TipocontratoID',
+            'Nombrecompleto' => 'required|string|max:100',
+            'Apellidopaterno' => 'required|string|max:100',
+            'Ci' => 'required|string|unique:Personal,Ci',
+            'CargoID' => 'required|exists:Cargo,CargoID',
+            'TipocontratoID' => 'required|exists:Tipocontrato,TipocontratoID',
             'GradoacademicoID' => 'required|exists:Gradoacademico,GradoacademicoID',
-            'AniosExperiencia' => 'nullable|integer', 
-            'Tituloobtenido'   => 'required|string|min:3|max:300',
-            'ArchivoTitulo'    => 'nullable|file|mimes:pdf|max:5120',
+            'ArchivoTitulo' => 'nullable|file|mimes:pdf|max:5120', // VAL-03: PDF max 5MB
         ]);
 
         DB::beginTransaction();
         try {
-            // 2. SANITIZACIÓN
-            $nombreLimpio   = Str::title(trim($request->Nombrecompleto)); 
-            $paternoLimpio  = Str::title(trim($request->Apellidopaterno));
-            $maternoLimpio  = $request->Apellidomaterno ? Str::title(trim($request->Apellidomaterno)) : null;
+            // 1. PREPARAR DATOS
+            $nombreLimpio  = Str::title(trim($request->Nombrecompleto)); 
+            $paternoLimpio = Str::title(trim($request->Apellidopaterno));
+            $maternoLimpio = $request->Apellidomaterno ? Str::title(trim($request->Apellidomaterno)) : null;
 
-            // 3. GENERACIÓN DE CORREO (Lógica "sc.nombre.apellido@upds.net.bo")
-            $slugBase = Str::slug(explode(' ', $nombreLimpio)[0] . '.' . $paternoLimpio);
-            $emailGenerado = "sc.{$slugBase}@upds.net.bo";
+            // Generar Correo
+            $primerNombreSlug = Str::slug(explode(' ', $nombreLimpio)[0]); 
+            $paternoSlug      = Str::slug($paternoLimpio);
+            $inicialMaterno   = $maternoLimpio ? substr(Str::slug($maternoLimpio), 0, 1) : '';
+            $emailGenerado    = "sc.{$primerNombreSlug}.{$paternoSlug}" . ($inicialMaterno ? ".{$inicialMaterno}" : "") . "@upds.net.bo";
 
             $contador = 1;
-            while (Personal::where('Correoelectronico', $emailGenerado)->exists()) {
-                $emailGenerado = "sc.{$slugBase}" . $contador . "@upds.net.bo";
+            while (Usuario::where('Correo', $emailGenerado)->exists()) {
+                $emailGenerado = "sc.{$primerNombreSlug}.{$paternoSlug}" . ($inicialMaterno ? ".{$inicialMaterno}" : "") . str_pad($contador, 2, '0', STR_PAD_LEFT) . "@upds.net.bo";
                 $contador++;
             }
 
-            // 4. GUARDADO DE PERSONAL
+            // 2. CREAR USUARIO PRIMERO
+            // Idpersonal es NULLABLE en BD, así que esto es seguro.
+            $nuevoUsuario = Usuario::create([
+                'NombreUsuario' => explode('@', $emailGenerado)[0],
+                'Correo'        => $emailGenerado,
+                'Contraseña'    => Hash::make($request->Ci), // SEG-01: Hash obligatorio
+                'Activo'        => 1,
+                'Idpersonal'    => null 
+            ]);
+
+            // 3. CREAR PERSONAL
             $nuevoDocente = Personal::create([
                 'Nombrecompleto'    => $nombreLimpio,
                 'Apellidopaterno'   => $paternoLimpio,
                 'Apellidomaterno'   => $maternoLimpio,
                 'Ci'                => $request->Ci,
                 'Genero'            => $request->Genero,
-                'Telelefono'        => $request->Telelefono, // Input form name
+                'Telelefono'        => $request->Telefono,
                 'Correoelectronico' => $emailGenerado,
                 'CargoID'           => $request->CargoID,
                 'TipocontratoID'    => $request->TipocontratoID,
                 'GradoacademicoID'  => $request->GradoacademicoID,
                 'Añosexperiencia'   => $request->AniosExperiencia,
-                'Activo'            => true
+                'Activo'            => 1,
+                'UsuarioID'         => $nuevoUsuario->UsuarioID 
             ]);
 
-            // 5. REGISTRAR FORMACIÓN (Historial)
+            // 4. ACTUALIZAR USUARIO (Cerrar el círculo)
+            $nuevoUsuario->Idpersonal = $nuevoDocente->PersonalID;
+            $nuevoUsuario->save();
+
+            // 5. REGISTRAR FORMACIÓN
             $rutaPDF = null;
             if ($request->hasFile('ArchivoTitulo')) {
                 $rutaPDF = $request->file('ArchivoTitulo')->store('titulos', 'public');
@@ -199,35 +222,35 @@ class PersonalController extends Controller
 
             Formacion::create([
                 'PersonalID'        => $nuevoDocente->PersonalID,
-                'CentroformacionID' => 1, // ID Genérico "Universidad Externa"
+                'CentroformacionID' => 1, // Ajustar si tienes el ID real en el request
                 'GradoacademicoID'  => $request->GradoacademicoID,
-                'Tituloobtenido'    => Str::upper($request->Tituloobtenido),
+                'Tituloobtenido'    => Str::upper($request->TituloObtenido),
+                'Añosestudios'      => $request->AñoEstudios,
                 'RutaArchivo'       => $rutaPDF
             ]);
 
-            // 6. CREAR USUARIO LOGIN
-            Usuario::create([
-                'Idpersonal'     => $nuevoDocente->PersonalID, // Referencia Cruzada
-                'NombreUsuario'  => $slugBase,
-                'Correo'         => $emailGenerado,
-                'Contraseña'     => Hash::make($request->Ci), // Password = Carnet
-                'Activo'         => true
-            ]);
+            // =========================================================
+            // SEG-05: REGISTRO EN BITÁCORA (CRÍTICO)
+            // =========================================================
+            \App\Models\Bitacora::registrar(
+                'CREAR_PERSONAL', 
+                "Se registró nuevo personal: {$nombreLimpio} {$paternoLimpio} (CI: {$request->Ci}) con usuario: {$emailGenerado}."
+            );
 
             DB::commit();
 
             Cache::forget('dashboard_stats_global');
+            Cache::forget('dashboard_stats_user_' . Auth::id());
 
             return redirect()->route('personal.index')
-                ->with('success', "Personal registrado: $nombreLimpio (Usuario: $slugBase)");
+                ->with('success', "Personal registrado correctamente: $nombreLimpio.");
 
         } catch (\Exception $e) {
             DB::rollBack();
-            // Borrar archivo si se subió pero falló la BD
-            if (isset($rutaPDF) && Storage::disk('public')->exists($rutaPDF)) {
-                Storage::disk('public')->delete($rutaPDF);
-            }
-            return back()->with('error', 'Error crítico: ' . $e->getMessage())->withInput();
+            // Si falló, borramos el archivo subido para no dejar basura
+            if (isset($rutaPDF)) Storage::disk('public')->delete($rutaPDF);
+            
+            return back()->with('error', 'Error en base de datos: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -294,62 +317,71 @@ class PersonalController extends Controller
    // =========================================================================
     // 3. DETALLE (EXPEDIENTE / KARDEX DIGITAL)
     // =========================================================================
-    public function show($id)
+public function show($id)
     {
         /** @var \App\Models\Usuario $currentUser */
         $currentUser = Auth::user();
 
-        // 1. SEGURIDAD
+        // ---------------------------------------------------------------------
+        // 1. SEGURIDAD (RBAC)
+        // ---------------------------------------------------------------------
         if (!$currentUser->canDo('acceso_total') && $currentUser->Idpersonal != $id) {
             abort(403, 'No tienes autorización para visualizar este expediente.');
         }
 
-        // 2. CONSULTA INTEGRAL (V3.1)
+        // ---------------------------------------------------------------------
+        // 2. CONSULTA INTEGRAL (OPTIMIZADA V3.1)
+        // ---------------------------------------------------------------------
         $docente = Personal::with([
+            // Datos Maestros del Docente
             'cargo:CargoID,Nombrecargo', 
             'contrato:TipocontratoID,Nombrecontrato',
             'grado:GradoacademicoID,Nombregrado',
             'usuario:UsuarioID,NombreUsuario,Activo,Correo',
             
-            // A. Materias 2026
+            // A. CARGA ACADÉMICA (Gestión 2026 - Ajustado a tu BD)
             'materias' => function($q) {
-                $q->wherePivot('Gestion', 2026)
-                  ->with('carrera:CarreraID,Nombrecarrera'); 
+                $q->wherePivot('Gestion', 2026) 
+                  ->withPivot('PersonalmateriaID', 'Grupo', 'Modalidad', 'RutaAutoevaluacion', 'NotaEvaluacion') 
+                  ->with('carreras:CarreraID,Nombrecarrera'); 
             },
             
-            // B. Formación
-            'formaciones.grado',
+            // B. FORMACIÓN (Historial de Títulos)
             'formaciones.centro',
+            'formaciones.grado',
             
-            // C. Producción Científica
-            'publicaciones' => function($q) {
-                $q->with([
-                    'tipo', 
-                    'medio',
-                    'autores' => function($query) {
-                        $query->withPivot('RolID');
-                    }
-                ])->orderBy('Fechapublicacion', 'desc');
-            }
+            // C. PROYECTOS (Investigación)
+            'proyectos' => function($q) {
+                $q->withPivot('Rol', 'EsResponsable', 'FechaInicio');
+            },
+
+            // D. PUBLICACIONES (Producción Científica)
+            'publicaciones.tipo'
+
         ])->findOrFail($id);
 
-        // 3. ORDENAMIENTO
+        // ---------------------------------------------------------------------
+        // 3. LÓGICA DE NEGOCIO Y ORDENAMIENTO
+        // ---------------------------------------------------------------------
+        
+        // Ordenar títulos: El grado académico más alto (Doctorado/Maestría) arriba
         $docente->setRelation('formaciones', $docente->formaciones->sortByDesc('GradoacademicoID'));
 
-        // 4. DATOS PARA EL MODAL "FAST TRACK" (Aquí estaba la "trampa")
-        // Necesitamos cargar estos catálogos para que el formulario emergente funcione
-        $tiposPub     = \App\Models\Tipopublicacion::orderBy('Nombretipo')->get();
-        $mediosPub    = \App\Models\Mediopublicacion::orderBy('Nombremedio')->get();
-        $rolesPub     = \App\Models\Rol::all();
-        
-        // ¡ESTO FALTABA! Los proyectos activos para el selector "Vinculada a Proyecto"
-        $proyectosPub = \App\Models\Proyectoinvestigacion::where('Estado', 'En Ejecución')
-                            ->with('carrera:CarreraID,Nombrecarrera') // Eager loading para mostrar nombre carrera
-                            ->get();
+        // Cargar Catálogos para los Modales (Nuevo Título / Nueva Publicación)
+        // Usamos Cache para no saturar SQL Server en cada recarga de perfil
+        $grados = Cache::remember('cat_grados_all', 86400, function() {
+            return Gradoacademico::orderBy('GradoacademicoID', 'desc')->get(['GradoacademicoID', 'Nombregrado']);
+        });
 
-        return view('personal.show', compact('docente', 'tiposPub', 'mediosPub', 'rolesPub', 'proyectosPub'));
+        $centros = Cache::remember('cat_centros_all', 86400, function() {
+            return Centroformacion::orderBy('Nombrecentro', 'asc')->get(['CentroformacionID', 'Nombrecentro']);
+        });
+
+        // ---------------------------------------------------------------------
+        // 4. RETORNO A LA VISTA
+        // ---------------------------------------------------------------------
+        return view('personal.show', compact('docente', 'grados', 'centros'));
     }
-
     // =========================================================================
     // 4. ACCIONES ADMINISTRATIVAS (PROTEGIDAS POR JERARQUÍA)
     // =========================================================================

@@ -3,143 +3,139 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache; 
 use App\Models\Personal;
 use App\Models\Materia;
-use App\Models\Carrera;
-use App\Models\Usuario;
 
 class CargaAcademicaController extends Controller
 {
+    /**
+     * Muestra la pantalla de asignación con datos precargados.
+     */
     public function create(Request $request)
     {
-        /** @var Usuario $user */
-        $user = Auth::user();
-        $esSuperAdmin = Gate::allows('acceso_total') || ($user->canDo('acceso_total') ?? false);
+        // 1. SEGURIDAD
+        if (!Gate::allows('gestion_academica') && !Gate::allows('acceso_total')) {
+            abort(403, 'Requiere permisos de Gestión Académica.');
+        }
 
-        // ---------------------------------------------------------------------
-        // 1. PREPARACIÓN DE FILTROS (Lógica de Seguridad V3.1)
-        // ---------------------------------------------------------------------
-        $permisos = ['nivel' => 0, 'carreras' => [], 'facultades' => []];
+        // 2. OBTENER DOCENTES
+        // Solo activos, ordenados y con su cargo
+        $docentes = Personal::where('Activo', 1)
+            ->select('PersonalID', 'Nombrecompleto', 'Apellidopaterno', 'Apellidomaterno', 'Fotoperfil', 'CargoID')
+            ->with('cargo:CargoID,Nombrecargo')
+            ->orderBy('Apellidopaterno')
+            ->orderBy('Apellidomaterno')
+            ->get();
+
+        // 3. OBTENER MATERIAS
+        // Preparamos el string de carreras para el buscador JS
+        $materias = Materia::with('carreras:CarreraID,Nombrecarrera')
+            ->select('MateriaID', 'Sigla', 'Nombremateria')
+            ->orderBy('Nombremateria')
+            ->get()
+            ->map(function ($materia) {
+                $materia->nombres_carreras = $materia->carreras->isNotEmpty() 
+                    ? $materia->carreras->pluck('Nombrecarrera')->join(', ') 
+                    : 'Transversal';
+                return $materia;
+            });
+
+        // 4. LÓGICA DE GRUPO INTELIGENTE (Auto-Incremento A -> B -> C)
+        $materia_id = $request->input('MateriaID');
+        $periodo_actual = $request->input('Periodo', 1); // Por defecto Semestre 1
+        $gestion_actual = date('Y');
+        $siguienteGrupo = 'A'; // Valor inicial por defecto
         
-        if (!$esSuperAdmin) {
-            $miPersonal = $user->personal;
-            
-            if (!$miPersonal) {
-                abort(403, 'No tienes un perfil de personal asociado.');
-            }
+        if ($materia_id) {
+            // Buscamos cuál es la letra más alta asignada en esta gestión/periodo
+            $ultimoGrupo = DB::table('Personalmateria')
+                ->where('MateriaID', $materia_id)
+                ->where('Gestion', $gestion_actual)
+                ->where('Periodo', $periodo_actual)
+                ->max('Grupo'); // Ej: Si existe 'A', retorna 'A'
 
-            // En V3.1, obtenemos las carreras a través de las materias asignadas 
-            $misCarrerasIds = $miPersonal->materias->pluck('CarreraID')->unique()->toArray();
-            
-            if (empty($misCarrerasIds)) {
-                return redirect()->route('dashboard')->with('error', 'No tienes ninguna carrera bajo tu gestión.');
-            }
-
-            $permisos['nivel'] = $user->personal->cargo->nivel_jerarquico ?? 1000;
-            $permisos['carreras'] = $misCarrerasIds;
-            
-            // Si tiene rango de autoridad (Decano/Nivel alto), calculamos facultades [cite: 111, 167]
-            if ($permisos['nivel'] <= 2) { 
-                $permisos['facultades'] = Carrera::whereIn('CarreraID', $misCarrerasIds)
-                                                 ->pluck('FacultadID')
-                                                 ->unique()
-                                                 ->toArray();
+            // Si existe un grupo previo, calculamos el siguiente (A -> B)
+            if ($ultimoGrupo) {
+                $siguienteGrupo = ++$ultimoGrupo; 
             }
         }
 
-        // ---------------------------------------------------------------------
-        // 2. RECUPERACIÓN DE DOCENTES (V3.1 Columns)
-        // ---------------------------------------------------------------------
-        $cacheKeyDocentes = $esSuperAdmin ? 'docentes_carga_all' : 'docentes_carga_user_' . $user->UsuarioID;
-
-        $docentes = Cache::remember($cacheKeyDocentes, 600, function() use ($esSuperAdmin, $permisos) {
-            $query = Personal::where('Activo', 1)
-                ->select('PersonalID', 'Nombrecompleto', 'Apellidopaterno', 'Apellidomaterno', 'Fotoperfil', 'CargoID', 'TipocontratoID')
-                ->with([
-                    'cargo:CargoID,Nombrecargo',
-                    'contrato:TipocontratoID,Nombrecontrato'
-                ])
-                ->orderBy('Apellidopaterno');
-
-            if (!$esSuperAdmin) {
-                if ($permisos['nivel'] <= 2) { // Visión por Facultad
-                    $query->whereHas('materias.carrera', fn($q) => $q->whereIn('FacultadID', $permisos['facultades']));
-                } else { // Visión por Carrera
-                    $query->whereHas('materias', fn($q) => $q->whereIn('CarreraID', $permisos['carreras']));
-                }
-            }
-            return $query->get();
-        });
-
-        // ---------------------------------------------------------------------
-        // 3. RECUPERACIÓN DE MATERIAS (V3.1 Columns)
-        // ---------------------------------------------------------------------
-        $cacheKeyMaterias = $esSuperAdmin ? 'materias_carga_all' : 'materias_carga_user_' . $user->UsuarioID;
-
-        $materias = Cache::remember($cacheKeyMaterias, 3600, function() use ($esSuperAdmin, $permisos) {
-            $query = Materia::select('MateriaID', 'Nombremateria', 'CarreraID', 'Sigla')
-                ->with('carrera:CarreraID,Nombrecarrera')
-                ->orderBy('Nombremateria');
-
-            if (!$esSuperAdmin) {
-                if ($permisos['nivel'] <= 2) {
-                    $query->whereHas('carrera', fn($q) => $q->whereIn('FacultadID', $permisos['facultades']));
-                } else {
-                    $query->whereIn('CarreraID', $permisos['carreras']);
-                }
-            }
-            return $query->get();
-        });
-
-        $docente_id = $request->get('docente_id');
-        $materia_id = $request->get('MateriaID'); 
-
-        return view('carga.create', compact('docentes', 'materias', 'docente_id', 'materia_id'));
+        return view('carga.create', [
+            'docentes' => $docentes,
+            'materias' => $materias,
+            'materia_id' => $materia_id,
+            'siguienteGrupo' => $siguienteGrupo, // Enviamos la sugerencia a la vista
+            'docente_id' => $request->input('docente_id')
+        ]);
     }
 
+    /**
+     * Guarda la asignación en la base de datos.
+     */
     public function store(Request $request)
     {
+        // 1. VALIDACIÓN
         $request->validate([
             'PersonalID' => 'required|exists:Personal,PersonalID',
             'MateriaID'  => 'required|exists:Materia,MateriaID',
-            'Gestion'    => 'required|integer|min:2020|max:2030',
-            'Periodo'    => 'required|string', 
+            'Gestion'    => 'required|integer',
+            'Periodo'    => 'required',
+            'Grupo'      => 'required|string|max:10',
+            // Validamos las modalidades permitidas en acreditación
+            'Modalidad'  => 'required|in:Presencial,Virtual,Semipresencial', 
         ]);
 
+        $grupo = strtoupper(trim($request->Grupo));
+
         try {
-            // 1. Verificación de Duplicados en tabla pivote V3.1 [cite: 260]
-            $existe = DB::table('Personalmateria')
-                ->where('PersonalID', $request->PersonalID)
-                ->where('MateriaID', $request->MateriaID)
-                ->where('Gestion', $request->Gestion)
-                ->where('Periodo', $request->Periodo)
-                ->exists();
+            DB::transaction(function () use ($request, $grupo) {
+                
+                // 2. VERIFICACIÓN DE CONFLICTO (Regla de Oro)
+                // No puede haber dos docentes con el mismo Grupo en la misma Materia/Periodo.
+                $ocupante = DB::table('Personalmateria')
+                    ->where('MateriaID', $request->MateriaID)
+                    ->where('Gestion', $request->Gestion)
+                    ->where('Periodo', $request->Periodo)
+                    ->where('Grupo', $grupo)
+                    ->first();
 
-            if ($existe) {
-                return back()->with('error', 'El docente ya tiene asignada esta materia en este periodo.')->withInput();
-            }
+                if ($ocupante) {
+                    // Si ya existe, obtenemos el nombre del "dueño" del grupo
+                    $docente = Personal::find($ocupante->PersonalID);
+                    $nombre = $docente ? $docente->Nombrecompleto : 'Otro docente';
+                    
+                    throw new \Exception("Conflicto: El Grupo '$grupo' de esta materia ya está asignado a $nombre. Por favor seleccione el siguiente grupo.");
+                }
 
-            // 2. Inserción en tabla pivote [cite: 262]
-            DB::table('Personalmateria')->insert([
-                'PersonalID' => $request->PersonalID,
-                'MateriaID'  => $request->MateriaID,
-                'Gestion'    => $request->Gestion,
-                'Periodo'    => $request->Periodo,
-            ]);
+                // 3. INSERTAR ASIGNACIÓN
+                DB::table('Personalmateria')->insert([
+                    'PersonalID' => $request->PersonalID,
+                    'MateriaID'  => $request->MateriaID,
+                    'Gestion'    => $request->Gestion,
+                    'Periodo'    => $request->Periodo,
+                    'Grupo'      => $grupo,
+                    'Modalidad'  => $request->Modalidad,
+                    // Los campos de evaluación (Ruta, Nota) quedan NULL hasta fin de semestre
+                ]);
+            });
 
-            // 3. Invalidación de Caché
-            Cache::forget('dashboard_stats_global');
-            Cache::forget('dashboard_stats_user_' . Auth::id());
-
-            return redirect()->route('personal.show', $request->PersonalID)
-                ->with('success', 'Carga académica asignada exitosamente.');
+            // 4. REDIRECCIÓN FLUIDA
+            // Volvemos a la pantalla 'create' pasando los parámetros para que
+            // el usuario siga trabajando en la misma materia (ej: para crear el Grupo B).
+            return redirect()
+                ->route('carga.create', [
+                    'MateriaID' => $request->MateriaID, 
+                    'Periodo' => $request->Periodo 
+                ])
+                ->with('success', "¡Asignación exitosa! Docente registrado en el Grupo $grupo ($request->Modalidad).");
 
         } catch (\Exception $e) {
-            return back()->with('error', 'Error técnico: ' . $e->getMessage())->withInput();
+            // Si hay error, volvemos atrás manteniendo los datos del formulario
+            return back()
+                ->withInput()
+                ->with('error', $e->getMessage());
         }
     }
 }
