@@ -186,12 +186,13 @@ public function store(Request $request)
             // 2. CREAR USUARIO PRIMERO
             // Idpersonal es NULLABLE en BD, así que esto es seguro.
             $nuevoUsuario = Usuario::create([
-                'NombreUsuario' => explode('@', $emailGenerado)[0],
-                'Correo'        => $emailGenerado,
-                'Contraseña'    => Hash::make($request->Ci), // SEG-01: Hash obligatorio
-                'Activo'        => 1,
-                'Idpersonal'    => null 
-            ]);
+        'NombreUsuario' => explode('@', $emailGenerado)[0],
+        'Correo'        => $emailGenerado,
+        'Password'      => Hash::make($request->Ci), // <--- CAMBIO AQUÍ: De 'Contraseña' a 'Password'
+        'Activo'        => 1,
+        'Idpersonal'    => null 
+    ]);
+            
 
             // 3. CREAR PERSONAL
             $nuevoDocente = Personal::create([
@@ -446,14 +447,14 @@ public function show($id)
         }
 
         Usuario::create([
-            'Idpersonal'    => $docente->PersonalID,
-            'NombreUsuario' => $slugBase,
-            'Correo'        => $docente->Correoelectronico,
-            'Contraseña'    => Hash::make($password),
-            'Activo'        => true
-        ]);
+        'Idpersonal'    => $docente->PersonalID,
+        'NombreUsuario' => $slugBase,
+        'Correo'        => $docente->Correoelectronico,
+        'Password'      => Hash::make($password), // <--- CAMBIO AQUÍ: De 'Contraseña' a 'Password'
+        'Activo'        => true
+    ]);
 
-        return back()->with('success', "Usuario creado: $slugBase (Clave: $password)");
+    return back()->with('success', "Usuario creado: $slugBase (Clave: $password)");
     }
 
     /**

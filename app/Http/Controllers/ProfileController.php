@@ -2,35 +2,32 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Usuario;
+use App\Models\Personal;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Auth, Hash, Storage, Cache};
-use App\Models\{Usuario, Personal}; // Usamos los modelos V3.1
+use Illuminate\Support\Facades\{Auth, Hash, Storage, Cache, DB, Log};
+use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
     /**
-     * Muestra el formulario de edición del perfil del docente logueado.
+     * Muestra el formulario de perfil.
      */
     public function edit()
     {
         /** @var Usuario $user */
         $user = Auth::user();
-        
-        // Obtenemos la ficha personal vinculada al usuario
-        // Usamos los nombres de columna exactos del script V3.1 [cite: 197, 198]
-        $docente = $user->personal()
-            ->select(['PersonalID', 'Nombrecompleto', 'Apellidopaterno', 'Apellidomaterno', 'Telelefono', 'Correoelectronico', 'Fotoperfil'])
-            ->first();
 
-        if (!$docente) {
-            return back()->with('error', 'No se encontró una ficha de personal vinculada a su cuenta de usuario.');
-        }
-        
+        // Usamos firstOrFail para asegurar que si el usuario no tiene ficha personal, salte un error 404 controlado
+        $docente = $user->personal()
+            ->with(['cargo:CargoID,Nombrecargo', 'contrato:TipocontratoID,Nombrecontrato']) // Optimizamos trayendo solo columnas necesarias
+            ->firstOrFail();
+
         return view('profile.edit', compact('docente'));
     }
 
     /**
-     * Procesa la actualización de datos del perfil.
+     * Procesa la actualización con Transacciones ACID.
      */
     public function update(Request $request)
     {
@@ -38,50 +35,74 @@ class ProfileController extends Controller
         $user = Auth::user();
         $docente = $user->personal;
 
-        // Validación adaptada a V3.1 [cite: 197, 182]
+        // 1. VALIDACIÓN ROBUSTA (Con todos los mensajes traducidos)
         $request->validate([
             'Telelefono' => 'nullable|string|max:20',
-            'Correoelectronico' => 'required|email|max:150|unique:Personal,Correoelectronico,'.$docente->PersonalID.',PersonalID',
-            'Fotoperfil' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024', 
-            'password' => 'nullable|min:6|confirmed', 
+            'Fotoperfil' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048', 
+            'password'   => [
+                'nullable', 
+                'confirmed', 
+                Password::min(8)
+                    ->letters()
+                    ->numbers()
+                    ->mixedCase()
+                    ->symbols()
+                    ->uncompromised(1),
+            ], 
+        ], [
+            // Traducciones completas para evitar mensajes en inglés
+            'password.min'           => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.letters'       => 'Debe incluir al menos una letra.',
+            'password.numbers'       => 'Debe incluir al menos un número.',
+            'password.mixed'         => 'Combine letras MAYÚSCULAS y minúsculas.',
+            'password.symbols'       => 'Debe incluir al menos un símbolo (ej. @, #, $).',
+            'password.uncompromised' => 'Esta contraseña ha aparecido en filtraciones de datos. Por favor elija otra.',
+            'password.confirmed'     => 'La confirmación de la contraseña no coincide.',
         ]);
 
         try {
-            // 1. Actualizar Datos en la tabla Personal
-            $docente->Telelefono = $request->Telelefono;
-            $docente->Correoelectronico = $request->Correoelectronico;
-
-            // Gestión de Foto de Perfil 
-            if ($request->hasFile('Fotoperfil')) {
-                // Borrar foto anterior si existe
-                if ($docente->Fotoperfil && Storage::disk('public')->exists($docente->Fotoperfil)) {
-                    Storage::disk('public')->delete($docente->Fotoperfil);
+            // 2. INICIO DE TRANSACCIÓN (Todo o Nada)
+            DB::transaction(function () use ($request, $docente, $user) {
+                
+                // A. Actualizar Celular
+                if ($docente->Telelefono !== $request->Telelefono) {
+                    $docente->Telelefono = $request->Telelefono;
+                    $docente->save();
                 }
-                
-                $extension = $request->file('Fotoperfil')->getClientOriginalExtension();
-                $nombreArchivo = 'perfil_' . $user->UsuarioID . '_' . time() . '.' . $extension;
-                $path = $request->file('Fotoperfil')->storeAs('fotos/perfiles', $nombreArchivo, 'public'); 
-                
-                $docente->Fotoperfil = $path;
-            }
 
-            $docente->save();
+                // B. Gestión de Foto (Optimizada)
+                if ($request->hasFile('Fotoperfil')) {
+                    // Borrar foto anterior si existe y no es un directorio
+                    if ($docente->Fotoperfil && Storage::disk('public')->exists($docente->Fotoperfil)) {
+                        Storage::disk('public')->delete($docente->Fotoperfil);
+                    }
 
-            // 2. Sincronizar datos con la tabla Usuario (Login) [cite: 182]
-            $user->Correo = $request->Correoelectronico; 
-            if ($request->filled('password')) {
-                $user->Contraseña = Hash::make($request->password); 
-            }
-            $user->save();
+                    // Generar nombre único y guardar
+                    $file = $request->file('Fotoperfil');
+                    $nombreArchivo = 'perfil_' . $user->UsuarioID . '_' . time() . '.' . $file->getClientOriginalExtension();
+                    
+                    $docente->Fotoperfil = $file->storeAs('fotos/perfiles', $nombreArchivo, 'public');
+                    $docente->save();
+                }
 
-            // 3. Limpiar Caché del Sidebar
-            // Vital para que el nombre y la foto nueva se reflejen de inmediato
+                // C. Actualizar Contraseña (Usuario)
+                if ($request->filled('password')) {
+                    $user->Password = Hash::make($request->password); // Columna 'Password' (Mayúscula)
+                    $user->save();
+                }
+            });
+
+            // 3. Limpiar Caché (Solo si la transacción fue exitosa)
             Cache::forget('user_sidebar_data_' . $user->UsuarioID);
 
-            return back()->with('success', 'Perfil actualizado con éxito. Los cambios son visibles en el menú lateral.');
+            return back()->with('success', 'Perfil actualizado correctamente.');
 
         } catch (\Exception $e) {
-            return back()->with('error', 'Error al procesar la actualización: ' . $e->getMessage());
+            // Registramos el error real en los logs del servidor para depuración
+            Log::error("Error actualizando perfil usuario ID {$user->UsuarioID}: " . $e->getMessage());
+
+            // Mostramos un mensaje genérico al usuario
+            return back()->with('error', 'Ocurrió un problema técnico al guardar los cambios. Intente nuevamente.');
         }
     }
 }

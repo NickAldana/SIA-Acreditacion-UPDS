@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Validation\Rules\Password;
 use App\Models\Usuario;
 use App\Models\Bitacora;
 use App\Models\Personal;
@@ -12,7 +12,6 @@ class UsuarioController extends Controller
 {
     /**
      * SEG-02: Listado maestro de cuentas de acceso.
-     * Carga optimizada con relaciones para evitar el problema N+1.
      */
     public function index(Request $request)
     {
@@ -21,7 +20,6 @@ class UsuarioController extends Controller
             'personal.cargo:CargoID,Nombrecargo'
         ]);
 
-        // Buscador por Nombre de Usuario o Correo
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -36,8 +34,7 @@ class UsuarioController extends Controller
     }
 
     /**
-     * Muestra el formulario de edición (SEG-02).
-     * Aplica validación jerárquica SEG-04.
+     * Muestra el formulario de edición.
      */
     public function edit($id)
     {
@@ -53,29 +50,39 @@ class UsuarioController extends Controller
 
     /**
      * Actualización de credenciales.
-     * Registra cambios en bitácora (SEG-05).
+     * Sincronizado con la columna 'Password'.
      */
-    public function update(Request $request, $id)
+public function update(Request $request, $id)
     {
         $usuario = Usuario::findOrFail($id);
 
+        // 1. Verificación de jerarquía
         if (!$this->validarJerarquiaUsuario($usuario)) {
             return redirect()->route('usuarios.index')->with('error', 'Acción denegada por jerarquía.');
         }
 
+        // 2. Validación Robusta (Cerrada correctamente)
         $request->validate([
             'Correo' => "required|email|unique:usuario,Correo,{$id},UsuarioID",
-            'password' => 'nullable|min:8|confirmed',
-        ]);
+            'password' => [
+                'nullable', 
+                'confirmed', 
+                Password::min(8)->letters()->numbers() // Alfanumérica: Letras + Números
+            ],
+        ]); 
 
+        // 3. Actualización de datos
         $usuario->Correo = $request->Correo;
 
-        // Si se define nueva contraseña, aplicar Hash (SEG-01)
+        // Si el admin escribió una clave nueva en el formulario
         if ($request->filled('password')) {
-            $usuario->Contraseña = Hash::make($request->password);
+            // MAPEO: Guardamos en la columna física 'Password' (P mayúscula)
+            $usuario->Password = Hash::make($request->password); 
+            
             Bitacora::registrar(
-                'cambio_password_admin', 
-                "Se cambió manualmente la contraseña del usuario: {$usuario->NombreUsuario}."
+                'CAMBIO_PASSWORD_ADMIN', 
+                "Se cambió manualmente la contraseña del usuario: {$usuario->NombreUsuario}.",
+                $usuario->UsuarioID
             );
         }
 
@@ -86,7 +93,6 @@ class UsuarioController extends Controller
 
     /**
      * SEG-02: Reset de contraseña al CI del docente.
-     * Blindado con SEG-04 y SEG-05.
      */
     public function resetPassword($id)
     {
@@ -100,21 +106,21 @@ class UsuarioController extends Controller
             return back()->with('error', 'Este usuario no tiene un registro de personal asociado o CI válido.');
         }
 
-        // Restablecer al CI con Hash Bcrypt
-        $usuario->Contraseña = Hash::make($usuario->personal->Ci);
+        // MAPEO: Restablecemos a la columna física 'Password' usando el CI
+        $usuario->Password = Hash::make($usuario->personal->Ci); 
         $usuario->save();
 
         Bitacora::registrar(
-            'reset_password', 
-            "Se restableció la contraseña al CI por defecto para: {$usuario->NombreUsuario}."
+            'RESET_PASSWORD', 
+            "Se restableció la contraseña al CI por defecto para: {$usuario->NombreUsuario}.",
+            $usuario->UsuarioID
         );
 
         return back()->with('success', "La contraseña de {$usuario->NombreUsuario} ha sido restablecida al CI.");
     }
 
     /**
-     * Activar / Bloquear acceso (SEG-02).
-     * Sincroniza el estado entre la tabla Usuario y Personal.
+     * Activar / Bloquear acceso.
      */
     public function toggleStatus($id)
     {
@@ -128,42 +134,38 @@ class UsuarioController extends Controller
         $usuario->Activo = $nuevoEstado;
         $usuario->save();
 
-        // Mantener integridad: si el usuario se bloquea, el perfil de personal también
         if ($usuario->personal) {
             $usuario->personal->Activo = $nuevoEstado;
             $usuario->personal->save();
         }
 
-        $accion = $nuevoEstado ? 'activar_usuario' : 'bloquear_usuario';
+        $accion = $nuevoEstado ? 'ACTIVAR_USUARIO' : 'BLOQUEAR_USUARIO';
         Bitacora::registrar(
             $accion, 
-            "El administrador cambió el estado de la cuenta: {$usuario->NombreUsuario}."
+            "Estado de cuenta actualizado para: {$usuario->NombreUsuario}.",
+            $usuario->UsuarioID
         );
 
         return back()->with('success', $nuevoEstado ? 'Cuenta activada correctamente.' : 'Cuenta bloqueada.');
     }
 
     /**
-     * SEG-04: Lógica privada de protección jerárquica.
-     * Impide que usuarios de menor rango gestionen a los de mayor rango.
+     * SEG-04: Lógica de protección jerárquica.
      */
     private function validarJerarquiaUsuario($targetUser)
     {
         /** @var \App\Models\Usuario $currentUser */
         $currentUser = Auth::user();
 
-        // 1. Super Admin (God Mode) siempre tiene permiso
         if ($currentUser->canDo('acceso_total')) {
             return true;
         }
 
-        // 2. Si no hay datos de cargo, denegar por seguridad
         if (!$currentUser->personal?->cargo || !$targetUser->personal?->cargo) {
             return false;
         }
 
-        // 3. Comparación (Nivel 1: Rector < Nivel 4: Docente)
-        // El número menor indica mayor jerarquía.
+        // El número menor indica mayor jerarquía (1 Rector < 4 Docente)
         return $currentUser->personal->cargo->nivel_jerarquico < $targetUser->personal->cargo->nivel_jerarquico;
     }
 }

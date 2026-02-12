@@ -13,7 +13,7 @@ return new class extends Migration
             $table->id('UsuarioID');
             $table->string('NombreUsuario', 50)->nullable();
             $table->string('Correo', 255)->unique();
-            $table->longText('Contraseña');
+            $table->longText('Password'); // Cambiado de 'Contraseña' a 'Password'
             $table->string('RecordatorioToken', 100)->nullable();
             $table->boolean('Activo')->default(true);
             $table->dateTime('Creacionfecha')->useCurrent();
